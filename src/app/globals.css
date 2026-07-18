@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+/**
+ * Design tokens.
+ *
+ * Enterprise software reads as dense, quiet and consistent. The palette is
+ * deliberately narrow: one neutral ramp, one accent, and semantic colours
+ * reserved for compliance state so that colour always means something. If
+ * everything is coloured, nothing is legible.
+ */
+
+@theme {
+  --color-canvas: oklch(0.985 0.002 250);
+  --color-surface: oklch(1 0 0);
+  --color-surface-muted: oklch(0.975 0.003 250);
+  --color-border-subtle: oklch(0.92 0.004 250);
+  --color-ink: oklch(0.21 0.012 255);
+  --color-ink-muted: oklch(0.52 0.012 255);
+  --color-ink-faint: oklch(0.66 0.01 255);
+
+  --color-brand: oklch(0.52 0.13 245);
+  --color-brand-strong: oklch(0.44 0.14 245);
+  --color-brand-soft: oklch(0.96 0.02 245);
+
+  /* Compliance semantics. Used for state, never for decoration. */
+  --color-state-ok: oklch(0.62 0.13 155);
+  --color-state-ok-soft: oklch(0.96 0.03 155);
+  --color-state-warn: oklch(0.72 0.15 75);
+  --color-state-warn-soft: oklch(0.97 0.04 75);
+  --color-state-bad: oklch(0.58 0.19 25);
+  --color-state-bad-soft: oklch(0.96 0.03 25);
+  --color-state-idle: oklch(0.7 0.01 250);
+  --color-state-idle-soft: oklch(0.96 0.002 250);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+
+  /* Dark theme. The sidebar is near-black in both themes, so only the content
+     surfaces need to flip. */
+  --color-canvas: oklch(0.19 0.008 255);
+  --color-surface: oklch(0.23 0.009 255);
+  --color-surface-muted: oklch(0.26 0.009 255);
+  --color-border-subtle: oklch(0.32 0.01 255);
+  --color-ink: oklch(0.96 0.003 255);
+  --color-ink-muted: oklch(0.72 0.008 255);
+  --color-ink-faint: oklch(0.58 0.008 255);
+  --color-brand: oklch(0.68 0.13 245);
+  --color-brand-strong: oklch(0.76 0.12 245);
+  --color-brand-soft: oklch(0.3 0.04 245);
+  --color-state-ok-soft: oklch(0.3 0.05 155);
+  --color-state-warn-soft: oklch(0.32 0.06 75);
+  --color-state-bad-soft: oklch(0.3 0.06 25);
+  --color-state-idle-soft: oklch(0.28 0.005 250);
+}
+
+* {
+  border-color: var(--color-border-subtle);
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular figures everywhere numbers are compared down a column. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--color-ink-faint) 40%, transparent);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--color-ink-faint) 70%, transparent);
+  background-clip: content-box;
+}
+
+/* MapLibre's stylesheet is imported by the map component; these override its
+   defaults to match the app rather than looking like a bolted-on widget. */
+.maplibregl-popup-content {
+  background: var(--color-surface) !important;
+  color: var(--color-ink) !important;
+  border: 1px solid var(--color-border-subtle) !important;
+  border-radius: 10px !important;
+  padding: 0 !important;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.12) !important;
+}
+.maplibregl-popup-tip {
+  border-top-color: var(--color-surface) !important;
+  border-bottom-color: var(--color-surface) !important;
+}
+.maplibregl-ctrl-group {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border-subtle) !important;
+}
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--color-border-subtle) !important;
+}

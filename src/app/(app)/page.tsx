@@ -9,6 +9,8 @@ import {
 import { PageHeader } from "@/components/ui/page-header";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { DisciplineBreakdown } from "@/components/dashboard/discipline-breakdown";
+import { FindingsBySeverity } from "@/components/dashboard/findings-by-severity";
+import { RemediationStatus } from "@/components/dashboard/remediation-status";
 import { Card, CardBody, CardHeader, EmptyState } from "@/components/ui/card";
 import { SeverityBadge } from "@/components/ui/badge";
 import { getDashboardSummary, listAllCompliance, listFindings } from "@/lib/data";
@@ -46,7 +48,7 @@ export default async function DashboardPage() {
       <div className="space-y-5 p-4 md:p-6">
         <section
           aria-label="Key figures"
-          className="grid grid-cols-2 gap-3 lg:grid-cols-5"
+          className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-5"
         >
           <StatTile
             label="Compliance rate"
@@ -97,6 +99,11 @@ export default async function DashboardPage() {
         </section>
 
         <DisciplineBreakdown rows={summary.by_discipline} />
+
+        <div className="grid gap-5 md:grid-cols-2">
+          <FindingsBySeverity data={summary.findings_by_severity} />
+          <RemediationStatus data={summary.findings_by_status} />
+        </div>
 
         <div className="grid gap-5 xl:grid-cols-2">
           <Card>

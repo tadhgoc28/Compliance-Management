@@ -2,24 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Building2,
-  FileText,
-  Images,
-  LayoutDashboard,
-  Map,
-  ShieldAlert,
-} from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const NAV = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/assets", label: "Asset Register", icon: Building2 },
-  { href: "/map", label: "Map", icon: Map },
-  { href: "/findings", label: "Findings", icon: ShieldAlert },
-  { href: "/documents", label: "Documents", icon: FileText },
-  { href: "/gallery", label: "Photo Gallery", icon: Images },
-] as const;
+import { NAV_ITEMS } from "./nav-items";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -36,7 +21,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-0.5 px-3 py-3">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           // Exact match for the dashboard, prefix match elsewhere, so that
           // /assets/<id> keeps the register highlighted.
           const active =

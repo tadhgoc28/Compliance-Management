@@ -412,6 +412,23 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     };
   });
 
+  const findings_by_severity = {
+    critical: findings.filter((f) => f.severity === "critical" && !["closed", "removed", "remediated"].includes(f.status)).length,
+    high: findings.filter((f) => f.severity === "high" && !["closed", "removed", "remediated"].includes(f.status)).length,
+    medium: findings.filter((f) => f.severity === "medium" && !["closed", "removed", "remediated"].includes(f.status)).length,
+    low: findings.filter((f) => f.severity === "low" && !["closed", "removed", "remediated"].includes(f.status)).length,
+    info: findings.filter((f) => f.severity === "info" && !["closed", "removed", "remediated"].includes(f.status)).length,
+  };
+
+  const findings_by_status = {
+    open: findings.filter((f) => f.status === "open").length,
+    monitoring: findings.filter((f) => f.status === "monitoring").length,
+    in_remediation: findings.filter((f) => f.status === "in_remediation").length,
+    remediated: findings.filter((f) => f.status === "remediated").length,
+    removed: findings.filter((f) => f.status === "removed").length,
+    closed: findings.filter((f) => f.status === "closed").length,
+  };
+
   return {
     asset_count: assets.total,
     site_count: sites.length,
@@ -422,6 +439,8 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     critical_findings: openFindings.filter((f) => f.severity === "critical").length,
     compliance_rate: tracked === 0 ? 0 : Math.round((compliant.length / tracked) * 100),
     by_discipline: by_discipline.filter((d) => d.total > 0),
+    findings_by_severity,
+    findings_by_status,
   };
 }
 

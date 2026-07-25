@@ -1,5 +1,6 @@
 import { GlobalSearch } from "@/components/search/global-search";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { MobileNav } from "@/components/shell/mobile-nav";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { UserMenu } from "@/components/shell/user-menu";
@@ -17,6 +18,7 @@ export async function Topbar() {
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-border-subtle bg-surface/80 px-4 backdrop-blur md:px-6">
+      <MobileNav />
       <GlobalSearch />
 
       <div className="ml-auto flex items-center gap-2">

@@ -177,6 +177,8 @@ export interface DashboardSummary {
   critical_findings: number;
   compliance_rate: number;
   by_discipline: DisciplineSummary[];
+  findings_by_severity: SeverityBreakdown;
+  findings_by_status: StatusBreakdown;
 }
 
 export interface DisciplineSummary {
@@ -189,4 +191,21 @@ export interface DisciplineSummary {
   due_soon: number;
   overdue: number;
   open_findings: number;
+}
+
+export interface SeverityBreakdown {
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  info: number;
+}
+
+export interface StatusBreakdown {
+  open: number;
+  monitoring: number;
+  in_remediation: number;
+  remediated: number;
+  removed: number;
+  closed: number;
 }

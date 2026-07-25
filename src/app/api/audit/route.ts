@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     };
 
     if (format === "csv") {
-      const csv = await exportAuditLogsCsv(filters);
+      const csv = await exportAuditLogsCsv(filters as any);
       return new NextResponse(csv, {
         status: 200,
         headers: {

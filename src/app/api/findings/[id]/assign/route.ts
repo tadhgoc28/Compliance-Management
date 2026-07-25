@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import { notifyFindingAssignment } from "@/lib/data/notifications";
 
 export async function PATCH(
   request: NextRequest,
@@ -18,6 +19,20 @@ export async function PATCH(
     }
 
     const supabase = await createClient();
+
+    // Fetch finding details and assigned user info
+    const { data: finding, error: findingError } = await supabase
+      .from("findings_api")
+      .select("id, title, asset_name, org_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (findingError || !finding) {
+      return NextResponse.json(
+        { error: "Finding not found" },
+        { status: 404 },
+      );
+    }
 
     const now = new Date().toISOString();
 
@@ -41,6 +56,31 @@ export async function PATCH(
         { error: "Finding not found" },
         { status: 404 },
       );
+    }
+
+    // Send notification if assigned
+    if (assigned_to) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("id", assigned_to)
+          .maybeSingle();
+
+        if (profile?.email) {
+          await notifyFindingAssignment(
+            finding.org_id,
+            assigned_to,
+            profile.email,
+            finding.title,
+            finding.asset_name || "Unknown asset",
+            id
+          );
+        }
+      } catch (notifyError) {
+        // Log but don't fail the assignment if notification fails
+        console.error("Failed to send notification:", notifyError);
+      }
     }
 
     return NextResponse.json({ success: true, finding: data[0] });

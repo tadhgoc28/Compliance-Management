@@ -299,3 +299,74 @@ export async function getNotificationHistory(
   if (error) throw error;
   return data || [];
 }
+
+/**
+ * Queue notification for finding assignment
+ */
+export async function notifyFindingAssignment(
+  orgId: string,
+  assignedToUserId: string,
+  recipientEmail: string,
+  findingTitle: string,
+  assetName: string,
+  findingId: string
+): Promise<void> {
+  const supabase = await createClient();
+
+  const subject = `Finding assigned: ${findingTitle}`;
+  const bodyHtml = `
+    <h2>${findingTitle}</h2>
+    <p>You have been assigned a finding on asset: <strong>${assetName}</strong></p>
+    <p><a href="https://complyra.app/findings/${findingId}">View finding details</a></p>
+  `;
+
+  const { error } = await supabase.from("email_queue").insert({
+    org_id: orgId,
+    recipient_email: recipientEmail,
+    subject,
+    body_html: bodyHtml,
+    entity_type: "finding",
+    entity_id: findingId,
+    status: "pending",
+  });
+
+  if (error) throw error;
+}
+
+/**
+ * Queue notification for inspection scheduling
+ */
+export async function notifyInspectionScheduled(
+  orgId: string,
+  recipientEmail: string,
+  assetName: string,
+  disciplineName: string,
+  scheduledFor: string,
+  inspectionCount: number
+): Promise<void> {
+  const supabase = await createClient();
+
+  const subject = `${inspectionCount} inspection${inspectionCount > 1 ? "s" : ""} scheduled for ${assetName}`;
+  const bodyHtml = `
+    <h2>Inspection Scheduled</h2>
+    <p>You have ${inspectionCount} new inspection${inspectionCount > 1 ? "s" : ""} scheduled:</p>
+    <ul>
+      <li>Asset: <strong>${assetName}</strong></li>
+      <li>Discipline: <strong>${disciplineName}</strong></li>
+      <li>Due date: <strong>${new Date(scheduledFor).toLocaleDateString()}</strong></li>
+    </ul>
+    <p><a href="https://complyra.app/assets">View assets</a></p>
+  `;
+
+  const { error } = await supabase.from("email_queue").insert({
+    org_id: orgId,
+    recipient_email: recipientEmail,
+    subject,
+    body_html: bodyHtml,
+    entity_type: "inspection",
+    entity_id: null,
+    status: "pending",
+  });
+
+  if (error) throw error;
+}

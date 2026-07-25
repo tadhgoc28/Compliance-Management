@@ -2,6 +2,7 @@ import "server-only";
 
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import { notifyInspectionScheduled } from "./notifications";
 import { Inspection } from "@/lib/types";
 
 export interface BulkCreateInspectionsRequest {
@@ -92,6 +93,47 @@ export async function bulkCreateInspections(
   if (error) throw new Error(`Failed to create inspections: ${error.message}`);
 
   const inspectionIds = data?.map((d) => d.id) ?? [];
+
+  // Send notifications to assigned surveyors
+  if (req.assignments && req.assignments.length > 0) {
+    try {
+      for (const assignment of req.assignments) {
+        const { data: surveyor } = await supabase
+          .from("profiles")
+          .select("email, full_name")
+          .eq("id", assignment.surveyorId)
+          .maybeSingle();
+
+        if (surveyor?.email) {
+          // Get first asset for notification (or could summarize)
+          const assetId = assignment.assetIds[0];
+          const { data: asset } = await supabase
+            .from("assets_api")
+            .select("name")
+            .eq("id", assetId)
+            .maybeSingle();
+
+          const { data: discipline } = await supabase
+            .from("disciplines")
+            .select("name")
+            .eq("id", req.disciplineId)
+            .maybeSingle();
+
+          await notifyInspectionScheduled(
+            org_id,
+            surveyor.email,
+            asset?.name || "Unknown asset",
+            discipline?.name || "Unknown discipline",
+            req.scheduledFor,
+            assignment.assetIds.length
+          );
+        }
+      }
+    } catch (notifyError) {
+      // Log but don't fail the creation if notifications fail
+      console.error("Failed to send inspection notifications:", notifyError);
+    }
+  }
 
   return {
     created: inspectionIds.length,

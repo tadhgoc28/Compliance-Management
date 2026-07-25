@@ -11,6 +11,7 @@ import { StatTile } from "@/components/dashboard/stat-tile";
 import { DisciplineBreakdown } from "@/components/dashboard/discipline-breakdown";
 import { FindingsBySeverity } from "@/components/dashboard/findings-by-severity";
 import { RemediationStatus } from "@/components/dashboard/remediation-status";
+import { ExportMetrics } from "@/components/dashboard/export-metrics";
 import { Card, CardBody, CardHeader, EmptyState } from "@/components/ui/card";
 import { SeverityBadge } from "@/components/ui/badge";
 import { getDashboardSummary, listAllCompliance, listFindings } from "@/lib/data";
@@ -43,6 +44,7 @@ export default async function DashboardPage() {
       <PageHeader
         title="Compliance overview"
         description="Estate-wide compliance position across all disciplines."
+        action={<ExportMetrics summary={summary} />}
       />
 
       <div className="space-y-5 p-4 md:p-6">

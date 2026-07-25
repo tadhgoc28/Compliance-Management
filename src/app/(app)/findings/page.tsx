@@ -2,9 +2,9 @@ import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, EmptyState } from "@/components/ui/card";
-import { FindingStatusBadge, SeverityBadge } from "@/components/ui/badge";
-import { listDisciplines, listFindings } from "@/lib/data";
-import { formatDate } from "@/lib/utils";
+import { FindingsList } from "@/components/findings/findings-list";
+import { ExportButtons } from "@/components/findings/export-buttons";
+import { listDisciplines, listFindings, listTeamMembers } from "@/lib/data";
 
 export const metadata = { title: "Findings" };
 
@@ -16,9 +16,10 @@ export default async function FindingsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
-  const [allFindings, disciplines] = await Promise.all([
+  const [allFindings, disciplines, teamMembers] = await Promise.all([
     listFindings(500),
     listDisciplines(),
+    listTeamMembers(),
   ]);
 
   let findings = allFindings;
@@ -39,6 +40,7 @@ export default async function FindingsPage({
       <PageHeader
         title="Findings"
         description="Defects and issues identified across all disciplines and assets."
+        action={<ExportButtons findings={findings} />}
       />
 
       <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle bg-surface px-4 py-3 md:px-6">
@@ -62,53 +64,7 @@ export default async function FindingsPage({
               icon={<ShieldAlert className="size-6" />}
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border-subtle text-left text-xs text-ink-muted">
-                    <th className="px-5 py-2.5 font-medium">Finding</th>
-                    <th className="px-5 py-2.5 font-medium">Asset</th>
-                    <th className="px-5 py-2.5 font-medium">Discipline</th>
-                    <th className="px-5 py-2.5 font-medium">Identified</th>
-                    <th className="px-5 py-2.5 font-medium">Severity</th>
-                    <th className="px-5 py-2.5 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border-subtle">
-                  {findings.map((f) => (
-                    <tr key={f.id} className="group transition-colors hover:bg-surface-muted cursor-pointer">
-                      <td className="px-5 py-2.5">
-                        <Link
-                          href={`/findings/${f.id}`}
-                          className="block"
-                        >
-                          <p className="font-medium text-ink group-hover:text-brand">{f.title}</p>
-                          <p className="font-mono text-xs text-ink-faint">{f.reference}</p>
-                        </Link>
-                      </td>
-                      <td className="px-5 py-2.5">
-                        <Link
-                          href={`/assets/${f.asset_id}`}
-                          className="text-ink-muted hover:text-brand"
-                        >
-                          {f.asset_name}
-                        </Link>
-                      </td>
-                      <td className="px-5 py-2.5 text-ink-muted">{f.discipline_name}</td>
-                      <td className="px-5 py-2.5 text-ink-muted">
-                        {formatDate(f.identified_at)}
-                      </td>
-                      <td className="px-5 py-2.5">
-                        <SeverityBadge severity={f.severity} />
-                      </td>
-                      <td className="px-5 py-2.5">
-                        <FindingStatusBadge status={f.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <FindingsList findings={findings} teamMembers={teamMembers} />
           )}
         </Card>
       </div>

@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEntityAuditTrail } from "@/lib/data/audit";
 
-interface RouteParams {
-  params: {
-    entityType: string;
-    entityId: string;
-  };
-}
-
 /**
  * GET /api/audit/[entityType]/[entityId]
  * Get audit trail for a specific entity
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ entityType: string; entityId: string }> }
+) {
   try {
-    const { entityType, entityId } = params;
+    const { entityType, entityId } = await params;
 
     if (!entityType || !entityId) {
       return NextResponse.json(

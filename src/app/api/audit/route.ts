@@ -21,12 +21,12 @@ export async function GET(request: NextRequest) {
     const format = searchParams.get("format") || "json";
 
     const filters = {
-      entityType,
-      entityId,
-      startDate,
-      endDate,
-      userId,
-      action,
+      entityType: entityType || undefined,
+      entityId: entityId || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+      userId: userId || undefined,
+      action: action || undefined,
       limit,
       offset,
     };

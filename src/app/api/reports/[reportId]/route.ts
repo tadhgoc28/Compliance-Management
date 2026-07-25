@@ -2,17 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getReport, deleteReport, getReportDownloadUrl } from "@/lib/data/reports";
 
-interface RouteParams {
-  params: {
-    reportId: string;
-  };
-}
-
 /**
  * GET /api/reports/[reportId]
  * Get a specific report
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ reportId: string }> }
+) {
   try {
     const supabase = await createClient();
     const {
@@ -24,7 +21,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { reportId } = params;
+    const { reportId } = await params;
     if (!reportId) {
       return NextResponse.json({ error: "Missing reportId" }, { status: 400 });
     }
@@ -64,7 +61,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * DELETE /api/reports/[reportId]
  * Delete a report
  */
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ reportId: string }> }
+) {
   try {
     const supabase = await createClient();
     const {
@@ -76,7 +76,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { reportId } = params;
+    const { reportId } = await params;
     if (!reportId) {
       return NextResponse.json({ error: "Missing reportId" }, { status: 400 });
     }

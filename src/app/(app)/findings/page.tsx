@@ -76,10 +76,15 @@ export default async function FindingsPage({
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
                   {findings.map((f) => (
-                    <tr key={f.id} className="hover:bg-surface-muted">
+                    <tr key={f.id} className="group transition-colors hover:bg-surface-muted cursor-pointer">
                       <td className="px-5 py-2.5">
-                        <p className="font-medium text-ink">{f.title}</p>
-                        <p className="font-mono text-xs text-ink-faint">{f.reference}</p>
+                        <Link
+                          href={`/findings/${f.id}`}
+                          className="block"
+                        >
+                          <p className="font-medium text-ink group-hover:text-brand">{f.title}</p>
+                          <p className="font-mono text-xs text-ink-faint">{f.reference}</p>
+                        </Link>
                       </td>
                       <td className="px-5 py-2.5">
                         <Link

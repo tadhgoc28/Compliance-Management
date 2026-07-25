@@ -261,7 +261,7 @@ export async function getAssetFindings(assetId: string): Promise<Finding[]> {
   const { data, error } = await supabase
     .from("findings_api")
     .select(
-      "id, reference, asset_id, asset_name, inspection_id, discipline_id, discipline_code, discipline_name, title, description, severity, status, location_note, identified_at, remediated_at, payload, schema_version",
+      "id, reference, asset_id, asset_name, inspection_id, discipline_id, discipline_code, discipline_name, title, description, severity, status, location_note, identified_at, remediated_at, assigned_to, assigned_to_name, assigned_at, payload, schema_version",
     )
     .eq("asset_id", assetId)
     .order("identified_at", { ascending: false });
@@ -281,12 +281,45 @@ export async function listFindings(limit = 50): Promise<Finding[]> {
   const { data, error } = await supabase
     .from("findings_api")
     .select(
-      "id, reference, asset_id, asset_name, inspection_id, discipline_id, discipline_code, discipline_name, title, description, severity, status, location_note, identified_at, remediated_at, payload, schema_version",
+      "id, reference, asset_id, asset_name, inspection_id, discipline_id, discipline_code, discipline_name, title, description, severity, status, location_note, identified_at, remediated_at, assigned_to, assigned_to_name, assigned_at, payload, schema_version",
     )
     .order("identified_at", { ascending: false })
     .limit(limit);
 
   if (error) throw new Error(`listFindings: ${error.message}`);
+  return data ?? [];
+}
+
+export async function getFinding(id: string): Promise<Finding | null> {
+  if (!isSupabaseConfigured) {
+    return demoFindings.find((f) => f.id === id) ?? null;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("findings_api")
+    .select(
+      "id, reference, asset_id, asset_name, inspection_id, discipline_id, discipline_code, discipline_name, title, description, severity, status, location_note, identified_at, remediated_at, assigned_to, assigned_to_name, assigned_at, payload, schema_version",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw new Error(`getFinding: ${error.message}`);
+  return data;
+}
+
+export async function listTeamMembers(): Promise<Array<{ id: string; full_name: string }>> {
+  if (!isSupabaseConfigured) {
+    return [];
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .order("full_name");
+
+  if (error) throw new Error(`listTeamMembers: ${error.message}`);
   return data ?? [];
 }
 

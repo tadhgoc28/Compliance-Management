@@ -21,6 +21,7 @@ export type InspectionStatus =
 
 export type FindingStatus =
   | "open"
+  | "assigned"
   | "monitoring"
   | "in_remediation"
   | "remediated"
@@ -138,6 +139,9 @@ export interface Finding {
   location_note: string | null;
   identified_at: string;
   remediated_at: string | null;
+  assigned_to?: string | null;
+  assigned_to_name?: string | null;
+  assigned_at?: string | null;
   payload: Payload;
   schema_version: number;
 }

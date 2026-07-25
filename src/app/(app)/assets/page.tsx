@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2 } from "lucide-react";
+import { Building2, Calendar } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, EmptyState } from "@/components/ui/card";
 import { AssetStatusBadge, ComplianceBadge } from "@/components/ui/badge";
@@ -64,6 +64,15 @@ export default async function AssetsPage({
       <PageHeader
         title="Asset register"
         description={`${total} asset${total === 1 ? "" : "s"} across the estate.`}
+        action={
+          <Link
+            href="/inspections/schedule"
+            className="flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand-dark transition-colors"
+          >
+            <Calendar className="size-4" />
+            Schedule inspections
+          </Link>
+        }
       />
       <AssetFilters sites={sites} disciplines={disciplines} />
 

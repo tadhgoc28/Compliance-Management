@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { Download, Trash2, Clock, CheckCircle, AlertCircle, Loader } from "lucide-react";
 import type { Report } from "@/lib/data/reports";
 
+type ReportWithDownloadUrl = Report & { download_url?: string | null };
+
 export function ReportList() {
-  const [reports, setReports] = useState<Report[]>([]);
+  const [reports, setReports] = useState<ReportWithDownloadUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);

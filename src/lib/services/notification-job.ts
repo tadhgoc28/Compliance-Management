@@ -123,7 +123,7 @@ export async function queueDeadlineNotifications(orgId: string): Promise<{
     }
 
     const managerEmails =
-      managers?.map((m) => m.users?.email).filter(Boolean) || [];
+      managers?.map((m) => (m.users as any)?.email).filter(Boolean) || [];
 
     // Queue notifications for each deadline item
     for (const item of deadlineItems) {

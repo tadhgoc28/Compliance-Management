@@ -37,8 +37,8 @@ async function generateFindingsByDisciplineReport(
 ): Promise<string> {
   const findingFilters: FindingFilters = {
     disciplineIds: filters.discipline,
-    severity: filters.severity?.[0],
-    status: filters.status,
+    severity: filters.severity?.[0] as "low" | "medium" | "high" | undefined,
+    status: filters.status as "open" | "in_progress" | "closed" | "resolved" | undefined,
     startDate: filters.dateRange?.startDate,
     endDate: filters.dateRange?.endDate,
     limit: 10000,
@@ -48,7 +48,7 @@ async function generateFindingsByDisciplineReport(
   const findings = result.data;
 
   // Group by discipline
-  const grouped = findings.reduce(
+  const grouped = (findings as any[]).reduce(
     (acc, f) => {
       const key = f.disciplines?.id || "unknown";
       if (!acc[key]) {
@@ -107,7 +107,7 @@ async function generateAssetAuditReport(
   const findResult = await listFindings(findingFilters);
   const findings = findResult.data;
 
-  const csv = buildAssetAuditCSV(asset, inspections, findings);
+  const csv = buildAssetAuditCSV(asset, inspections as any, findings);
   return csv;
 }
 
@@ -136,7 +136,7 @@ async function generateDeadlineReport(
     .in("compliance_state", ["overdue", "due_soon"])
     .order("next_due_date", { ascending: true });
 
-  const csv = buildDeadlineReportCSV(deadlines || []);
+  const csv = buildDeadlineReportCSV((deadlines as any) || []);
   return csv;
 }
 
@@ -248,7 +248,7 @@ function buildAssetAuditCSV(
 
   inspections.forEach((i) => {
     rows.push([
-      i.disciplines?.name || "Unknown",
+      (i.disciplines as any)?.name || "Unknown",
       new Date(i.scheduled_for).toLocaleDateString(),
       i.completed_at ? new Date(i.completed_at).toLocaleDateString() : "Pending",
       i.status,

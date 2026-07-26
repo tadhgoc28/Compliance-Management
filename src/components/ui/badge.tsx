@@ -85,6 +85,7 @@ export function SeverityBadge({ severity }: { severity: FindingSeverity }) {
 
 const FINDING_STATUS: Record<FindingStatus, { tone: Tone; label: string }> = {
   open: { tone: "bad", label: "Open" },
+  assigned: { tone: "warn", label: "Assigned" },
   monitoring: { tone: "warn", label: "Monitoring" },
   in_remediation: { tone: "info", label: "In remediation" },
   remediated: { tone: "ok", label: "Remediated" },

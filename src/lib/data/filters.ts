@@ -235,7 +235,7 @@ export async function getAssetInspectionStats(assetId: string): Promise<{
             if (!acc[key]) {
               acc[key] = {
                 discipline_id: insp.discipline_id,
-                discipline_name: insp.disciplines?.name || "Unknown",
+                discipline_name: (insp.disciplines as any)?.name || "Unknown",
                 count: 0,
                 last_inspection: null,
               };
@@ -331,7 +331,7 @@ export async function getComplianceSummaryByDiscipline(): Promise<
         if (!acc[key]) {
           acc[key] = {
             discipline_id: item.discipline_id,
-            discipline_name: item.disciplines?.name || "Unknown",
+            discipline_name: (item.disciplines as any)?.name || "Unknown",
             total_assets: 0,
             compliant: 0,
             due_soon: 0,

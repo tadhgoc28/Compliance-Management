@@ -18,7 +18,7 @@ const CreateReportSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   file_format: z.enum(["pdf", "csv", "xlsx"]).default("pdf"),
-  filters: z.record(z.any()).optional(),
+  filters: z.record(z.string(), z.any()).optional(),
 });
 
 /**
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
+      return NextResponse.json({ error: error.issues }, { status: 400 });
     }
 
     console.error("Failed to create report:", error);

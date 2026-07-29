@@ -61,6 +61,11 @@ export const demoDisciplines: Discipline[] = [
   { id: "d-ventilation", code: "ventilation", name: "Ventilation", description: "LEV testing and air quality.", colour: "teal", icon: "wind", is_active: true },
   { id: "d-roof", code: "roof", name: "Roof Inspections", description: "Roof condition and fall protection.", colour: "slate", icon: "home", is_active: true },
   { id: "d-structural", code: "structural", name: "Structural Surveys", description: "Structural condition and defects.", colour: "violet", icon: "building-2", is_active: true },
+  { id: "d-coshh", code: "coshh", name: "COSHH", description: "Hazardous substance storage, handling and exposure control.", colour: "lime", icon: "flask-conical", is_active: true },
+  { id: "d-hazmat", code: "hazmat", name: "Hazardous Materials", description: "Lead paint, PCBs, mould and other non-asbestos hazards.", colour: "rose", icon: "biohazard", is_active: true },
+  { id: "d-accessibility", code: "accessibility", name: "Accessibility", description: "Access audits against building regulations.", colour: "blue", icon: "accessibility", is_active: true },
+  { id: "d-energy", code: "energy", name: "Energy Efficiency", description: "Energy performance and plant efficiency.", colour: "emerald", icon: "gauge", is_active: true },
+  { id: "d-radiation", code: "radiation", name: "Radiation Safety", description: "Sealed sources, gauging equipment and legacy sources.", colour: "fuchsia", icon: "radiation", is_active: true },
 ];
 
 export const demoSites: Site[] = [
@@ -123,16 +128,27 @@ export const demoAssets: Asset[] = demoSites.flatMap((site, siteIndex) => {
  */
 export const demoCompliance: AssetComplianceStatus[] = demoAssets.flatMap((asset) => {
   const year = Number(asset.attributes.construction_year ?? 2000);
+  const assetType = asset.asset_type_name ?? "";
   const applicable = demoDisciplines.filter((d) => {
     if (d.code === "asbestos") return year < 2000;
     if (d.code === "gas") return rand() > 0.55;
     if (d.code === "ventilation") return rand() > 0.5;
     if (d.code === "structural") return rand() > 0.6;
+    if (d.code === "hazmat") return year < 1990 && rand() > 0.3;
+    if (d.code === "coshh") return assetType === "Chemical Store" || rand() > 0.6;
+    if (d.code === "accessibility") {
+      return ["Administration Building", "Welfare Facility", "Workshop", "Control Room"].includes(assetType);
+    }
+    if (d.code === "energy") return assetType !== "Storage Shed";
+    if (d.code === "radiation") {
+      return ["Filtration Building", "Pump House"].includes(assetType) && rand() > 0.7;
+    }
     return true;
   });
 
   return applicable.map((d) => {
-    const frequency = d.code === "legionella" ? 6 : d.code === "fire" ? 12 : 12;
+    const frequency =
+      d.code === "legionella" ? 6 : d.code === "accessibility" ? 36 : d.code === "hazmat" || d.code === "energy" ? 24 : 12;
     const dueOffset = randInt(-120, 300);
     const state =
       dueOffset < 0 ? "overdue" : dueOffset < 30 ? "due_soon" : "compliant";
@@ -179,6 +195,45 @@ const LEGIONELLA_TITLES = [
   "Positive legionella sample at shower",
 ];
 
+const COSHH_TITLES = [
+  "Incompatible chemicals stored together",
+  "Safety data sheet missing for stored solvent",
+  "Spill kit absent from chemical store",
+  "Damaged container in dosing area",
+  "Storage exceeds permitted quantity limit",
+];
+
+const HAZMAT_TITLES = [
+  "Lead paint on external window frames",
+  "Suspected PCBs in light fitting capacitors",
+  "Mould growth to welfare area ceiling",
+  "Legacy refrigerant gas in decommissioned plant",
+  "Contaminated ground adjacent to former fuel store",
+];
+
+const ACCESSIBILITY_TITLES = [
+  "Entrance step lacks ramp alternative",
+  "Accessible toilet not provided",
+  "Corridor width below minimum standard",
+  "No designated accessible parking bay",
+  "Signage lacks tactile or braille alternative",
+];
+
+const ENERGY_TITLES = [
+  "Heating system operating without zoning controls",
+  "Poor insulation to roof void",
+  "Outdated lighting lacking occupancy sensing",
+  "Air leakage at building envelope junctions",
+  "No sub-metering for major plant",
+];
+
+const RADIATION_TITLES = [
+  "Level gauge leak test overdue",
+  "Dosimetry record lapsed for radiation worker",
+  "Shielding defect on moisture density gauge",
+  "Legacy source pending decommissioning",
+];
+
 const GENERIC_TITLES = [
   "Distribution board lacking current certificate",
   "LEV system overdue thorough examination",
@@ -191,6 +246,11 @@ function titleFor(code: string): string {
   if (code === "asbestos") return pick(ASBESTOS_TITLES);
   if (code === "fire") return pick(FIRE_TITLES);
   if (code === "legionella") return pick(LEGIONELLA_TITLES);
+  if (code === "coshh") return pick(COSHH_TITLES);
+  if (code === "hazmat") return pick(HAZMAT_TITLES);
+  if (code === "accessibility") return pick(ACCESSIBILITY_TITLES);
+  if (code === "energy") return pick(ENERGY_TITLES);
+  if (code === "radiation") return pick(RADIATION_TITLES);
   return pick(GENERIC_TITLES);
 }
 
@@ -241,7 +301,79 @@ function payloadFor(code: string): Record<string, unknown> {
       sampled_at: isoDate(-randInt(10, 200)),
     };
   }
+  if (code === "coshh") {
+    return {
+      substance_category: pick(["flammable", "corrosive", "toxic", "irritant", "oxidising"]),
+      storage_issue: pick(["incompatible_storage", "inadequate_ventilation", "missing_sds", "spill_kit_absent", "exceeds_storage_limit"]),
+      substance_name: pick(["Sodium hypochlorite", "Polyelectrolyte", "Hydrochloric acid", "Ferric sulphate"]),
+      quantity_value: randInt(5, 500),
+      quantity_unit: pick(["litre", "kg"]),
+      control_measures_adequate: rand() > 0.4,
+      remedial_priority: pick(["immediate", "urgent", "planned", "advisory"]),
+    };
+  }
+  if (code === "hazmat") {
+    return {
+      material_type: pick(["lead_paint", "pcb", "mould", "synthetic_mineral_fibre", "refrigerant_gas"]),
+      extent_value: randInt(1, 40),
+      extent_unit: pick(["m2", "item"]),
+      condition: pick(["good", "low_damage", "medium_damage", "high_damage"]),
+      sample_reference: `HZ-${randInt(1000, 9999)}`,
+      recommendation: pick(["manage", "encapsulate", "remove", "further_survey"]),
+    };
+  }
+  if (code === "accessibility") {
+    return {
+      element_type: pick(["entrance", "ramp", "toilet_facility", "signage", "parking_bay"]),
+      barrier_type: pick(["step_or_kerb", "insufficient_width", "missing_handrail", "no_accessible_toilet", "no_designated_parking"]),
+      standard_reference: pick(["Part M Building Regs", "IS EN 17210"]),
+      remedial_priority: pick(["immediate", "urgent", "planned", "advisory"]),
+    };
+  }
+  if (code === "energy") {
+    return {
+      system_type: pick(["building_fabric", "heating_system", "lighting", "controls", "metering"]),
+      issue_type: pick(["poor_insulation", "inefficient_plant", "no_zoning_controls", "outdated_lighting", "missing_sub_metering"]),
+      estimated_annual_cost_impact: randInt(500, 15000),
+      remedial_priority: pick(["immediate", "urgent", "planned", "advisory"]),
+    };
+  }
+  if (code === "radiation") {
+    return {
+      source_type: pick(["level_gauge", "moisture_density_gauge", "sealed_source", "legacy_source"]),
+      issue_type: pick(["leak_test_overdue", "dosimetry_lapse", "shielding_defect", "decommissioning_required"]),
+      activity_value: randInt(1, 200),
+      activity_unit: pick(["MBq", "GBq"]),
+      remedial_priority: pick(["immediate", "urgent", "planned", "advisory"]),
+    };
+  }
   return { note: "See attached report for detail." };
+}
+
+/** Discipline-specific inspection payloads, mirroring payloadFor for findings. */
+function inspectionPayloadFor(code: string): Record<string, unknown> {
+  if (code === "asbestos") {
+    return { survey_type: pick(["management", "reinspection", "refurbishment"]), surveyor_licence: `LIC-${randInt(100, 999)}` };
+  }
+  if (code === "fire") {
+    return { assessment_type: pick(["fire_risk_assessment", "door_survey", "alarm_test"]), overall_risk_rating: pick(["tolerable", "moderate", "substantial"]) };
+  }
+  if (code === "coshh") {
+    return { assessment_type: pick(["coshh_assessment", "storage_audit", "exposure_monitoring"]), overall_risk_rating: pick(["low", "medium", "high"]) };
+  }
+  if (code === "hazmat") {
+    return { survey_type: pick(["material_survey", "refurbishment_survey", "remediation_verification"]), surveyor_qualification: "P402/P405" };
+  }
+  if (code === "accessibility") {
+    return { assessment_type: pick(["access_audit", "part_m_compliance_review"]), overall_rating: pick(["compliant", "partially_compliant", "non_compliant"]) };
+  }
+  if (code === "energy") {
+    return { assessment_type: pick(["energy_audit", "epc_assessment"]), ber_rating: pick(["B2", "C1", "C2", "C3", "D1"]) };
+  }
+  if (code === "radiation") {
+    return { assessment_type: pick(["radiation_safety_assessment", "leak_test", "source_inventory_check"]), overall_risk_rating: pick(["low", "medium"]) };
+  }
+  return { assessment_type: "routine" };
 }
 
 const LOCATIONS = [
@@ -319,12 +451,7 @@ export const demoInspections: Inspection[] = demoCompliance
       scheduled_for: c.next_due_date,
       completed_at: done ? new Date(`${c.last_inspection_at}T10:00:00Z`).toISOString() : null,
       summary: done ? "Inspection completed. Findings recorded where applicable." : null,
-      payload:
-        c.discipline_code === "asbestos"
-          ? { survey_type: pick(["management", "reinspection", "refurbishment"]), surveyor_licence: `LIC-${randInt(100, 999)}` }
-          : c.discipline_code === "fire"
-            ? { assessment_type: pick(["fire_risk_assessment", "door_survey", "alarm_test"]), overall_risk_rating: pick(["tolerable", "moderate", "substantial"]) }
-            : { assessment_type: "routine" },
+      payload: inspectionPayloadFor(c.discipline_code),
       schema_version: 1,
     } satisfies Inspection;
   });

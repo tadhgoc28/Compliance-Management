@@ -346,7 +346,7 @@ export async function getAssetInspections(assetId: string): Promise<Inspection[]
 /* -------------------------------------------------------------------------- */
 
 const DOC_COLUMNS =
-  "id, title, description, kind, asset_id, asset_name, discipline_id, discipline_code, bucket, storage_path, mime_type, size_bytes, width, height, taken_at, issued_at, expires_at, uploaded_by_name, created_at";
+  "id, title, description, kind, asset_id, asset_name, discipline_id, discipline_code, bucket, storage_path, external_url, mime_type, size_bytes, width, height, taken_at, issued_at, expires_at, uploaded_by_name, created_at";
 
 export async function listDocuments(opts: {
   kind?: string;
@@ -387,8 +387,10 @@ export async function listDocuments(opts: {
 }
 
 /**
- * The bucket is private, so every file needs a short-lived signed URL. Batched
- * per bucket rather than one round trip per row.
+ * Uploaded files live in a private bucket, so they need a short-lived signed
+ * URL, batched per bucket rather than one round trip per row. Externally
+ * linked reports (independent inspection teams' own portals) already have a
+ * URL and skip signing entirely.
  */
 async function withSignedUrls(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -396,15 +398,27 @@ async function withSignedUrls(
 ): Promise<DocumentRecord[]> {
   if (rows.length === 0) return rows;
 
-  const paths = rows.map((r) => r.storage_path);
-  const { data, error } = await supabase.storage
-    .from(rows[0].bucket ?? "documents")
-    .createSignedUrls(paths, 60 * 60);
+  const uploaded = rows.filter(
+    (r): r is DocumentRecord & { storage_path: string } => r.storage_path !== null,
+  );
 
-  if (error) return rows;
+  let byPath = new Map<string, string | null>();
+  if (uploaded.length > 0) {
+    const paths = uploaded.map((r) => r.storage_path);
+    const { data, error } = await supabase.storage
+      .from(uploaded[0].bucket ?? "documents")
+      .createSignedUrls(paths, 60 * 60);
+    if (!error) {
+      byPath = new Map(
+        data.filter((d): d is typeof d & { path: string } => d.path !== null).map((d) => [d.path, d.signedUrl]),
+      );
+    }
+  }
 
-  const byPath = new Map(data.map((d) => [d.path, d.signedUrl]));
-  return rows.map((r) => ({ ...r, url: byPath.get(r.storage_path) ?? null }));
+  return rows.map((r) => ({
+    ...r,
+    url: r.external_url ?? (r.storage_path ? (byPath.get(r.storage_path) ?? null) : null),
+  }));
 }
 
 /* -------------------------------------------------------------------------- */

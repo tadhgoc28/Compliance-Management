@@ -156,7 +156,9 @@ export interface DocumentRecord {
   discipline_id: string | null;
   discipline_code: string | null;
   bucket: string;
-  storage_path: string;
+  /** Exactly one of storage_path / external_url is set. */
+  storage_path: string | null;
+  external_url: string | null;
   mime_type: string | null;
   size_bytes: number | null;
   width: number | null;

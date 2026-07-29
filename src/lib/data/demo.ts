@@ -467,6 +467,13 @@ const DOC_TITLES: Record<string, string[]> = {
 
 let docSeq = 9000;
 
+/**
+ * Independent inspection teams publish their own reports rather than handing
+ * over a file. A minority of report/certificate documents link out to one of
+ * these rather than being an upload we hold — see 0013_document_external_links.
+ */
+const INDEPENDENT_PROVIDERS = ["envirotest", "safetycert", "hygienelabs", "structuralsurveys"];
+
 export const demoDocuments: DocumentRecord[] = demoAssets.flatMap((asset) => {
   const count = randInt(2, 6);
   return Array.from({ length: count }, () => {
@@ -474,19 +481,28 @@ export const demoDocuments: DocumentRecord[] = demoAssets.flatMap((asset) => {
     const d = pick(demoDisciplines);
     docSeq += 1;
     const isPhoto = kind === "photo";
+    const isExternal = (kind === "report" || kind === "certificate") && rand() > 0.75;
+    const externalUrl = isExternal
+      ? `https://${pick(INDEPENDENT_PROVIDERS)}.ie/reports/${docSeq}`
+      : null;
     return {
       id: `doc-${docSeq}`,
       title: `${pick(DOC_TITLES[kind])} — ${asset.reference}`,
-      description: isPhoto ? "Site photograph captured during inspection." : "Uploaded compliance document.",
+      description: isExternal
+        ? "Independent report, hosted by the issuing inspection provider."
+        : isPhoto
+          ? "Site photograph captured during inspection."
+          : "Uploaded compliance document.",
       kind,
       asset_id: asset.id,
       asset_name: asset.name,
       discipline_id: d.id,
       discipline_code: d.code,
       bucket: "documents",
-      storage_path: `${DEMO_ORG.id}/${asset.id}/${docSeq}${isPhoto ? ".jpg" : ".pdf"}`,
-      mime_type: isPhoto ? "image/jpeg" : "application/pdf",
-      size_bytes: randInt(40_000, 8_000_000),
+      storage_path: isExternal ? null : `${DEMO_ORG.id}/${asset.id}/${docSeq}${isPhoto ? ".jpg" : ".pdf"}`,
+      external_url: externalUrl,
+      mime_type: isExternal ? null : isPhoto ? "image/jpeg" : "application/pdf",
+      size_bytes: isExternal ? null : randInt(40_000, 8_000_000),
       width: isPhoto ? 1600 : null,
       height: isPhoto ? 1200 : null,
       taken_at: isPhoto ? new Date(Date.now() - randInt(1, 600) * 86400000).toISOString() : null,
@@ -494,9 +510,10 @@ export const demoDocuments: DocumentRecord[] = demoAssets.flatMap((asset) => {
       expires_at: kind === "certificate" ? isoDate(randInt(-90, 400)) : null,
       uploaded_by_name: pick(INSPECTORS),
       created_at: new Date(Date.now() - randInt(1, 600) * 86400000).toISOString(),
-      // Demo mode has no storage bucket, so photos render as generated
-      // placeholders rather than fake-looking stock imagery.
-      url: null,
+      // Demo mode has no storage bucket, so uploaded photos/files render as
+      // generated placeholders rather than fake-looking stock imagery -- but
+      // an external link is a real URL, so it opens for real even in demo.
+      url: externalUrl,
     } satisfies DocumentRecord;
   });
 });

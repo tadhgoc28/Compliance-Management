@@ -70,7 +70,17 @@ export default async function DocumentsPage({
                           </div>
                         </td>
                         <td className="px-5 py-2.5">
-                          <Badge tone="idle">{humanise(d.kind)}</Badge>
+                          <div className="flex items-center gap-1.5">
+                            <Badge tone="idle">{humanise(d.kind)}</Badge>
+                            {d.external_url ? (
+                              <span
+                                className="text-[10px] font-medium uppercase tracking-wide text-ink-faint"
+                                title="Linked to the issuing inspection provider's own report, not uploaded to this platform"
+                              >
+                                External
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="px-5 py-2.5">
                           {d.asset_id ? (

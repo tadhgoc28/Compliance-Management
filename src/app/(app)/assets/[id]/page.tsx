@@ -299,6 +299,7 @@ function DocumentsTab({
             <p className="truncate text-sm text-ink">{d.title}</p>
             <p className="text-xs text-ink-faint">
               {humanise(d.kind)} · {formatDate(d.issued_at)}
+              {d.external_url ? " · External" : ""}
             </p>
           </div>
           {d.url ? (

@@ -10,7 +10,7 @@ returns void as $$
 declare
   v_org_id uuid;
 begin
-  for v_org_id in select id from public.organizations loop
+  for v_org_id in select id from public.organisations loop
     perform public.queue_deadline_notifications_for_org(v_org_id);
   end loop;
 end;
@@ -69,10 +69,10 @@ begin
     -- Queue email for each manager/admin in org
     for manager_email in
       select users.email
-      from public.organization_members om
-      join auth.users on users.id = om.user_id
-      where om.org_id = org_id_param
-        and om.role in ('manager', 'admin')
+      from public.memberships m
+      join auth.users on users.id = m.user_id
+      where m.org_id = org_id_param
+        and m.role in ('owner', 'admin', 'manager')
     loop
       insert into public.email_queue (
         org_id,

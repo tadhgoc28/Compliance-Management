@@ -22,7 +22,9 @@ export default function LoginPage() {
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-white/60">
             Asbestos, fire, legionella, electrical and more — asset registers,
-            inspections, findings and documents in one operational view.
+            inspections, findings, documents and a full audit trail in one
+            operational view, so you can show exactly what was known and when
+            it was acted on if it&apos;s ever questioned.
           </p>
         </div>
         <p className="text-xs text-white/35">

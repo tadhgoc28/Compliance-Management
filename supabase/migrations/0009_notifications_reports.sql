@@ -4,7 +4,7 @@
 -- Create notification_preferences table
 create table if not exists public.notification_preferences (
   id uuid default gen_random_uuid() primary key,
-  org_id uuid not null references public.organizations(id) on delete cascade,
+  org_id uuid not null references public.organisations (id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   notify_overdue boolean default true,
   notify_due_soon boolean default true,
@@ -17,8 +17,7 @@ create table if not exists public.notification_preferences (
   updated_at timestamp with time zone default now(),
 
   constraint valid_frequency check (email_frequency in ('immediate', 'daily', 'weekly')),
-  constraint unique_pref per user per org
-    unique(org_id, user_id)
+  constraint unique_pref unique (org_id, user_id)
 );
 
 create index if not exists idx_notification_prefs_org_user on public.notification_preferences(org_id, user_id);
@@ -32,7 +31,7 @@ create policy "Users manage their own notification preferences"
 -- Create deadline_notifications table (sent notification tracking)
 create table if not exists public.deadline_notifications (
   id uuid default gen_random_uuid() primary key,
-  org_id uuid not null references public.organizations(id) on delete cascade,
+  org_id uuid not null references public.organisations (id) on delete cascade,
   asset_discipline_id uuid not null references public.asset_disciplines(id) on delete cascade,
   notification_type text not null, -- 'overdue', 'due_soon', 'finding_created'
   recipient_email text not null,
@@ -56,17 +55,17 @@ create policy "Managers can read notification history for their org"
   on public.deadline_notifications for select
   using (
     exists (
-      select 1 from public.organization_members om
-      where om.org_id = deadline_notifications.org_id
-        and om.user_id = auth.uid()
-        and om.role in ('manager', 'admin')
+      select 1 from public.memberships m
+      where m.org_id = deadline_notifications.org_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin', 'manager')
     )
   );
 
 -- Create email_queue table (transient queue for batch processing)
 create table if not exists public.email_queue (
   id uuid default gen_random_uuid() primary key,
-  org_id uuid not null references public.organizations(id) on delete cascade,
+  org_id uuid not null references public.organisations (id) on delete cascade,
   recipient_email text not null,
   subject text not null,
   body_html text not null,
@@ -98,7 +97,7 @@ $$ language plpgsql;
 -- Create reports table
 create table if not exists public.reports (
   id uuid default gen_random_uuid() primary key,
-  org_id uuid not null references public.organizations(id) on delete cascade,
+  org_id uuid not null references public.organisations (id) on delete cascade,
   created_by uuid not null references auth.users(id) on delete cascade,
   report_type text not null, -- 'compliance_summary', 'findings_by_discipline', 'asset_audit', 'deadline_report'
   title text not null,
@@ -130,10 +129,10 @@ create policy "Users can read reports they created or their org admins created"
   using (
     auth.uid() = created_by or
     exists (
-      select 1 from public.organization_members om
-      where om.org_id = reports.org_id
-        and om.user_id = auth.uid()
-        and om.role in ('manager', 'admin')
+      select 1 from public.memberships m
+      where m.org_id = reports.org_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin', 'manager')
     )
   );
 
@@ -141,10 +140,10 @@ create policy "Users can create reports for their org"
   on public.reports for insert
   with check (
     exists (
-      select 1 from public.organization_members om
-      where om.org_id = reports.org_id
-        and om.user_id = auth.uid()
-        and om.role in ('manager', 'admin')
+      select 1 from public.memberships m
+      where m.org_id = reports.org_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin', 'manager')
     )
   );
 
@@ -157,17 +156,16 @@ create or replace function public.seed_notification_preferences_for_user()
 returns trigger as $$
 begin
   insert into public.notification_preferences (org_id, user_id)
-  select org_id, new.user_id
-  from public.organization_members
-  where user_id = new.user_id;
+  values (new.org_id, new.user_id)
+  on conflict (org_id, user_id) do nothing;
   return new;
 end;
 $$ language plpgsql;
 
 -- Trigger to auto-create notification preferences when user joins org
-drop trigger if exists seed_notification_prefs_trigger on public.organization_members;
+drop trigger if exists seed_notification_prefs_trigger on public.memberships;
 create trigger seed_notification_prefs_trigger
-after insert on public.organization_members
+after insert on public.memberships
 for each row execute function public.seed_notification_preferences_for_user();
 
 -- View: Pending emails to send (filtered by frequency preferences)

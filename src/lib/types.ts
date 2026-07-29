@@ -198,6 +198,26 @@ export interface SiteVisit {
   notes: string | null;
 }
 
+/**
+ * Who changed what, when -- the evidence trail behind the liability/insurance
+ * case for this platform. Written by database triggers, never by the app, so
+ * it can't be edited after the fact.
+ */
+export interface AuditLog {
+  id: string;
+  org_id: string;
+  user_id: string | null;
+  user_name: string | null;
+  entity_type: "inspection" | "finding" | "asset_discipline";
+  entity_id: string;
+  action: "insert" | "update" | "delete";
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
+  changed_fields: string[];
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
 /** Headline numbers for the dashboard. */
 export interface DashboardSummary {
   asset_count: number;

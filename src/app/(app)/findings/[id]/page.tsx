@@ -3,7 +3,9 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { FindingDetail } from "@/components/findings/finding-detail";
+import { AuditHistory } from "@/components/findings/audit-history";
 import { getFinding, listTeamMembers } from "@/lib/data";
+import { getEntityAuditTrail } from "@/lib/data/audit";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 
@@ -15,9 +17,10 @@ export default async function FindingPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [finding, teamMembers] = await Promise.all([
+  const [finding, teamMembers, history] = await Promise.all([
     getFinding(id),
     listTeamMembers(),
+    getEntityAuditTrail("finding", id),
   ]);
 
   if (!finding) {
@@ -57,12 +60,13 @@ export default async function FindingPage({
         }
       />
 
-      <div className="p-4 md:p-6">
+      <div className="space-y-5 p-4 md:p-6">
         <FindingDetail
           finding={finding}
           teamMembers={teamMembers}
           userRole={userRole as any}
         />
+        <AuditHistory logs={history} />
       </div>
     </>
   );

@@ -1,18 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+import "server-only";
 
-export interface AuditLog {
-  id: string;
-  org_id: string;
-  user_id: string | null;
-  entity_type: "inspection" | "finding" | "asset_discipline";
-  entity_id: string;
-  action: "insert" | "update" | "delete";
-  old_values: Record<string, unknown> | null;
-  new_values: Record<string, unknown> | null;
-  changed_fields: string[];
-  metadata: Record<string, unknown>;
-  created_at: string;
-}
+import { isSupabaseConfigured } from "@/lib/env";
+import { createClient } from "@/lib/supabase/server";
+import { demoAuditLogs } from "./demo";
+import type { AuditLog } from "@/lib/types";
+
+export type { AuditLog };
 
 export interface AuditFilters {
   entityType?: "inspection" | "finding" | "asset_discipline";
@@ -25,18 +18,35 @@ export interface AuditFilters {
   offset?: number;
 }
 
+function matchesFilters(log: AuditLog, filters: AuditFilters): boolean {
+  if (filters.entityType && log.entity_type !== filters.entityType) return false;
+  if (filters.entityId && log.entity_id !== filters.entityId) return false;
+  if (filters.userId && log.user_id !== filters.userId) return false;
+  if (filters.action && log.action !== filters.action) return false;
+  if (filters.startDate && log.created_at < new Date(filters.startDate).toISOString()) return false;
+  if (filters.endDate && log.created_at > new Date(filters.endDate).toISOString()) return false;
+  return true;
+}
+
 /**
  * Get audit trail for a specific entity (inspection, finding, etc.)
  */
 export async function getEntityAuditTrail(
   entityType: "inspection" | "finding" | "asset_discipline",
   entityId: string,
-  limit = 50
+  limit = 50,
 ): Promise<AuditLog[]> {
+  if (!isSupabaseConfigured) {
+    return demoAuditLogs
+      .filter((l) => l.entity_type === entityType && l.entity_id === entityId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limit);
+  }
+
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from("audit_logs")
+    .from("audit_logs_api")
     .select("*")
     .eq("entity_type", entityType)
     .eq("entity_id", entityId)
@@ -51,34 +61,29 @@ export async function getEntityAuditTrail(
  * List audit logs with filtering and pagination
  */
 export async function listAuditLogs(
-  filters: AuditFilters
+  filters: AuditFilters,
 ): Promise<{ data: AuditLog[]; total: number }> {
+  const { limit = 50, offset = 0 } = filters;
+
+  if (!isSupabaseConfigured) {
+    const matching = [...demoAuditLogs]
+      .filter((l) => matchesFilters(l, filters))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return {
+      data: matching.slice(offset, offset + limit),
+      total: matching.length,
+    };
+  }
+
   const supabase = await createClient();
-  const {
-    entityType,
-    entityId,
-    startDate,
-    endDate,
-    userId,
-    action,
-    limit = 50,
-    offset = 0,
-  } = filters;
+  let query = supabase.from("audit_logs_api").select("*", { count: "exact" });
 
-  let query = supabase.from("audit_logs").select("*", { count: "exact" });
-
-  if (entityType) query = query.eq("entity_type", entityType);
-  if (entityId) query = query.eq("entity_id", entityId);
-  if (userId) query = query.eq("user_id", userId);
-  if (action) query = query.eq("action", action);
-
-  if (startDate) {
-    query = query.gte("created_at", new Date(startDate).toISOString());
-  }
-
-  if (endDate) {
-    query = query.lte("created_at", new Date(endDate).toISOString());
-  }
+  if (filters.entityType) query = query.eq("entity_type", filters.entityType);
+  if (filters.entityId) query = query.eq("entity_id", filters.entityId);
+  if (filters.userId) query = query.eq("user_id", filters.userId);
+  if (filters.action) query = query.eq("action", filters.action);
+  if (filters.startDate) query = query.gte("created_at", new Date(filters.startDate).toISOString());
+  if (filters.endDate) query = query.lte("created_at", new Date(filters.endDate).toISOString());
 
   const { data, error, count } = await query
     .order("created_at", { ascending: false })
@@ -93,33 +98,11 @@ export async function listAuditLogs(
 }
 
 /**
- * Get audit log entries for a date range
- */
-export async function getAuditLogsByDateRange(
-  startDate: Date,
-  endDate: Date,
-  limit = 1000
-): Promise<AuditLog[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("audit_logs")
-    .select("*")
-    .gte("created_at", startDate.toISOString())
-    .lte("created_at", endDate.toISOString())
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error) throw error;
-  return data || [];
-}
-
-/**
  * Compare two versions of an entity using audit logs
  */
 export async function getAuditDiff(
   entityType: "inspection" | "finding" | "asset_discipline",
-  entityId: string
+  entityId: string,
 ): Promise<
   Array<{
     timestamp: string;
@@ -141,34 +124,25 @@ export async function getAuditDiff(
 }
 
 /**
- * Export audit logs as CSV
+ * Export audit logs as CSV -- the evidence pack format an insurer or lawyer
+ * would actually be handed.
  */
-export async function exportAuditLogsCsv(
-  filters: AuditFilters
-): Promise<string> {
-  const logs = (await listAuditLogs(filters)).data;
+export async function exportAuditLogsCsv(filters: AuditFilters): Promise<string> {
+  const logs = (await listAuditLogs({ ...filters, limit: filters.limit ?? 10000 })).data;
 
-  const headers = [
-    "Created At",
-    "Action",
-    "Entity Type",
-    "Entity ID",
-    "Changed Fields",
-    "User ID",
-  ];
+  const headers = ["Created At", "Action", "Entity Type", "Entity ID", "Changed Fields", "User"];
   const rows = logs.map((log) => [
     log.created_at,
     log.action,
     log.entity_type,
     log.entity_id,
     log.changed_fields.join("; "),
-    log.user_id || "System",
+    log.user_name || log.user_id || "System",
   ]);
 
-  const csv = [
-    headers.join(","),
-    ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-  ].join("\n");
+  const csv = [headers, ...rows]
+    .map((row) => row.map((cell) => `"${cell}"`).join(","))
+    .join("\n");
 
   return csv;
 }

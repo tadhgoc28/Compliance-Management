@@ -5,7 +5,7 @@
 -- Create audit_logs table
 create table if not exists public.audit_logs (
   id uuid default gen_random_uuid() primary key,
-  org_id uuid not null references public.organizations(id) on delete cascade,
+  org_id uuid not null references public.organisations (id) on delete cascade,
   user_id uuid references auth.users(id) on delete set null,
   entity_type text not null, -- 'inspection', 'finding', 'asset_discipline'
   entity_id uuid not null,
@@ -34,17 +34,17 @@ create policy "Managers can read audit logs for their org"
   using (
     auth.uid() = user_id or -- Always see own actions
     exists (
-      select 1 from public.organization_members om
-      where om.org_id = audit_logs.org_id
-        and om.user_id = auth.uid()
-        and om.role in ('manager', 'admin')
+      select 1 from public.memberships m
+      where m.org_id = audit_logs.org_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin', 'manager')
     )
   );
 
 -- Create audit_retention_policy table
 create table if not exists public.audit_retention_policies (
   id uuid default gen_random_uuid() primary key,
-  org_id uuid not null unique references public.organizations(id) on delete cascade,
+  org_id uuid not null unique references public.organisations (id) on delete cascade,
   retention_days integer default 365 check (retention_days > 0),
   auto_purge_enabled boolean default true,
   created_at timestamp with time zone default now(),
@@ -57,10 +57,10 @@ create policy "Org admins manage retention policy"
   on public.audit_retention_policies for all
   using (
     exists (
-      select 1 from public.organization_members om
-      where om.org_id = audit_retention_policies.org_id
-        and om.user_id = auth.uid()
-        and om.role = 'admin'
+      select 1 from public.memberships m
+      where m.org_id = audit_retention_policies.org_id
+        and m.user_id = auth.uid()
+        and m.role in ('owner', 'admin')
     )
   );
 
@@ -270,7 +270,7 @@ declare
   v_org_id uuid;
   v_deleted_count bigint;
 begin
-  for v_org_id in select id from public.organizations loop
+  for v_org_id in select id from public.organisations loop
     select coalesce(retention_days, 365)
     into retention_days
     from public.audit_retention_policies
@@ -282,9 +282,33 @@ begin
       delete from public.audit_logs
       where org_id = v_org_id and created_at < cutoff_date;
 
-      v_deleted_count := changes();
+      get diagnostics v_deleted_count = row_count;
       return query select v_org_id, v_deleted_count;
     end if;
   end loop;
 end;
 $$ language plpgsql;
+
+-- Raw audit_logs only has user_id; every other _api view in this schema
+-- resolves names the same way, so the audit trail isn't the one screen that
+-- shows a UUID instead of a person.
+create view public.audit_logs_api
+with (security_invoker = true)
+as
+select
+  al.id,
+  al.org_id,
+  al.user_id,
+  p.full_name as user_name,
+  al.entity_type,
+  al.entity_id,
+  al.action,
+  al.old_values,
+  al.new_values,
+  al.changed_fields,
+  al.metadata,
+  al.created_at
+from public.audit_logs al
+left join public.profiles p on p.id = al.user_id;
+
+grant select on public.audit_logs_api to authenticated;

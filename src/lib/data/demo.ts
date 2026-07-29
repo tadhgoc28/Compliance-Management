@@ -14,6 +14,7 @@
 import type {
   Asset,
   AssetComplianceStatus,
+  AuditLog,
   Discipline,
   DocumentRecord,
   Finding,
@@ -574,4 +575,78 @@ export const demoSiteVisits: SiteVisit[] = demoQrCodes.flatMap((qr) => {
       notes: null,
     } satisfies SiteVisit;
   });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Audit trail                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Synthesises a plausible history per finding (raised, assigned, worked,
+ * closed) rather than one flat "created" event -- the whole point of an audit
+ * trail is showing the sequence, not just the current state.
+ */
+export const demoAuditLogs: AuditLog[] = demoFindings.flatMap((f) => {
+  const events: AuditLog[] = [];
+  let seq = 0;
+
+  const push = (
+    daysAfterIdentified: number,
+    action: AuditLog["action"],
+    changedFields: string[],
+    oldValues: Record<string, unknown> | null,
+    newValues: Record<string, unknown> | null,
+  ) => {
+    seq += 1;
+    events.push({
+      id: `audit-${f.id}-${seq}`,
+      org_id: DEMO_ORG.id,
+      user_id: `u-${f.id}-${seq}`,
+      user_name: pick(INSPECTORS),
+      entity_type: "finding",
+      entity_id: f.id,
+      action,
+      old_values: oldValues,
+      new_values: newValues,
+      changed_fields: changedFields,
+      metadata: {},
+      created_at: new Date(
+        new Date(f.identified_at).getTime() + daysAfterIdentified * 86400000,
+      ).toISOString(),
+    });
+  };
+
+  push(0, "insert", [], null, {
+    title: f.title,
+    severity: f.severity,
+    status: "open",
+  });
+
+  const progressesBeyondOpen = f.status !== "open";
+  if (progressesBeyondOpen) {
+    push(randInt(1, 4), "update", ["status"], { status: "open" }, { status: "assigned" });
+  }
+  if (["monitoring", "in_remediation", "remediated", "closed"].includes(f.status)) {
+    push(
+      randInt(5, 10),
+      "update",
+      ["status"],
+      { status: "assigned" },
+      { status: "in_remediation" },
+    );
+  }
+  if (["remediated", "closed"].includes(f.status) && f.remediated_at) {
+    const remediatedDaysAfter = Math.round(
+      (new Date(f.remediated_at).getTime() - new Date(f.identified_at).getTime()) / 86400000,
+    );
+    push(
+      Math.max(remediatedDaysAfter, 0),
+      "update",
+      ["status", "remediated_at"],
+      { status: "in_remediation" },
+      { status: f.status, remediated_at: f.remediated_at },
+    );
+  }
+
+  return events;
 });

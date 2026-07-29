@@ -172,6 +172,32 @@ export interface DocumentRecord {
   url?: string | null;
 }
 
+export interface QrCode {
+  id: string;
+  asset_id: string;
+  asset_name?: string | null;
+  asset_reference?: string | null;
+  label: string | null;
+  created_by_name: string | null;
+  created_at: string;
+}
+
+/** A logged presence at an asset, opened by a QR scan and closed by scanning again. */
+export interface SiteVisit {
+  id: string;
+  asset_id: string;
+  asset_name?: string | null;
+  qr_code_id: string | null;
+  qr_code_label: string | null;
+  user_id: string | null;
+  visitor_name: string | null;
+  inspection_id: string | null;
+  inspection_reference?: string | null;
+  checked_in_at: string;
+  checked_out_at: string | null;
+  notes: string | null;
+}
+
 /** Headline numbers for the dashboard. */
 export interface DashboardSummary {
   asset_count: number;

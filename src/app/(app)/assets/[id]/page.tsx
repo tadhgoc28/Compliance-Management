@@ -5,7 +5,9 @@ import {
   CalendarClock,
   FileText,
   Image as ImageIcon,
+  LogIn,
   MapPin,
+  QrCode as QrCodeIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardBody, CardHeader, EmptyState } from "@/components/ui/card";
@@ -23,8 +25,12 @@ import {
   getAssetCompliance,
   getAssetFindings,
   getAssetInspections,
+  getAssetQrCodes,
+  getAssetVisits,
   listDocuments,
 } from "@/lib/data";
+import { checkinQrSvg, checkinUrl } from "@/lib/qrcode";
+import { QrCodeManager, type QrCodeWithImage } from "@/components/site-access/qr-code-manager";
 import { formatDate, formatPayloadValue, formatRelativeDays, humanise } from "@/lib/utils";
 
 export async function generateMetadata({
@@ -46,17 +52,27 @@ export default async function AssetDetailPage({
   const asset = await getAsset(id);
   if (!asset) notFound();
 
-  const [compliance, findings, inspections, documents] = await Promise.all([
+  const [compliance, findings, inspections, documents, qrCodes, visits] = await Promise.all([
     getAssetCompliance(id),
     getAssetFindings(id),
     getAssetInspections(id),
     listDocuments({ assetId: id }),
+    getAssetQrCodes(id),
+    getAssetVisits(id),
   ]);
 
   const photos = documents.filter((d) => d.kind === "photo");
   const files = documents.filter((d) => d.kind !== "photo");
   const openFindings = findings.filter(
     (f) => !["closed", "removed", "remediated"].includes(f.status),
+  );
+
+  const qrCodesWithImages: QrCodeWithImage[] = await Promise.all(
+    qrCodes.map(async (qr) => ({
+      ...qr,
+      svgMarkup: await checkinQrSvg(qr.id),
+      checkinUrl: checkinUrl(qr.id),
+    })),
   );
 
   return (
@@ -173,6 +189,18 @@ export default async function AssetDetailPage({
                   label: "Photos",
                   count: photos.length,
                   content: <PhotosTab photos={photos} />,
+                },
+                {
+                  id: "site-access",
+                  label: "Site Access",
+                  count: qrCodes.length,
+                  content: (
+                    <SiteAccessTab
+                      assetId={id}
+                      qrCodes={qrCodesWithImages}
+                      visits={visits}
+                    />
+                  ),
                 },
               ]}
             />
@@ -363,4 +391,81 @@ function PhotoThumb({ title, url }: { title: string; url: string | null | undefi
       <ImageIcon className="size-6 text-white/70" />
     </div>
   );
+}
+
+function SiteAccessTab({
+  assetId,
+  qrCodes,
+  visits,
+}: {
+  assetId: string;
+  qrCodes: QrCodeWithImage[];
+  visits: Awaited<ReturnType<typeof getAssetVisits>>;
+}) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="mb-3 flex items-center gap-1.5 text-sm font-medium text-ink">
+          <QrCodeIcon className="size-4 text-ink-faint" />
+          QR codes
+        </h3>
+        <QrCodeManager assetId={assetId} qrCodes={qrCodes} />
+      </div>
+
+      <div>
+        <h3 className="mb-3 flex items-center gap-1.5 text-sm font-medium text-ink">
+          <LogIn className="size-4 text-ink-faint" />
+          Recent visits
+        </h3>
+        {visits.length === 0 ? (
+          <EmptyState
+            title="No check-ins recorded"
+            description="Visits appear here once someone scans a QR code for this asset."
+          />
+        ) : (
+          <ul className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
+            {visits.map((v) => (
+              <li key={v.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">
+                    {v.visitor_name ?? "Unknown"}
+                  </p>
+                  <p className="text-xs text-ink-faint">
+                    {v.qr_code_label ?? "Main entrance"} · {formatDateTime(v.checked_in_at)}
+                    {v.inspection_reference ? ` · ${v.inspection_reference}` : ""}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right text-xs">
+                  {v.checked_out_at ? (
+                    <span className="text-ink-muted">
+                      {formatVisitDuration(v.checked_in_at, v.checked_out_at)}
+                    </span>
+                  ) : (
+                    <span className="font-medium text-state-ok">On site</span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function formatDateTime(value: string): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return `${formatDate(value)}, ${d.toLocaleTimeString("en-IE", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function formatVisitDuration(start: string, end: string): string {
+  const minutes = Math.max(
+    0,
+    Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000),
+  );
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes % 60;
+  return rem === 0 ? `${hours}h` : `${hours}h ${rem}m`;
 }

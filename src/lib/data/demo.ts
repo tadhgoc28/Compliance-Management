@@ -20,7 +20,9 @@ import type {
   FindingSeverity,
   FindingStatus,
   Inspection,
+  QrCode,
   Site,
+  SiteVisit,
 } from "@/lib/types";
 
 /** Deterministic PRNG (mulberry32) so demo data is stable across reloads. */
@@ -515,5 +517,61 @@ export const demoDocuments: DocumentRecord[] = demoAssets.flatMap((asset) => {
       // an external link is a real URL, so it opens for real even in demo.
       url: externalUrl,
     } satisfies DocumentRecord;
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* QR codes & site visits                                                     */
+/* -------------------------------------------------------------------------- */
+
+const LOCATION_LABELS = ["Ground floor", "First floor", "Plant room", "Loading bay"];
+
+let qrSeq = 7000;
+
+export const demoQrCodes: QrCode[] = demoAssets.flatMap((asset) => {
+  const count = randInt(1, 2);
+  return Array.from({ length: count }, (_, i) => {
+    qrSeq += 1;
+    return {
+      id: `qr-${qrSeq}`,
+      asset_id: asset.id,
+      asset_name: asset.name,
+      asset_reference: asset.reference,
+      label: i === 0 ? "Main entrance" : pick(LOCATION_LABELS),
+      created_by_name: pick(INSPECTORS),
+      created_at: new Date(Date.now() - randInt(30, 500) * 86400000).toISOString(),
+    } satisfies QrCode;
+  });
+});
+
+let visitSeq = 6000;
+
+export const demoSiteVisits: SiteVisit[] = demoQrCodes.flatMap((qr) => {
+  const count = randInt(0, 4);
+  const relatedInspections = demoInspections.filter((insp) => insp.asset_id === qr.asset_id);
+  return Array.from({ length: count }, () => {
+    visitSeq += 1;
+    const daysAgo = randInt(0, 45);
+    const hoursAgo = randInt(0, 8);
+    const checkedInAt = new Date(Date.now() - daysAgo * 86400000 - hoursAgo * 3600000);
+    const stillOnSite = daysAgo === 0 && hoursAgo < 4 && rand() > 0.85;
+    const durationMinutes = randInt(20, 240);
+    const inspection = relatedInspections.length > 0 && rand() > 0.5 ? pick(relatedInspections) : null;
+    return {
+      id: `visit-${visitSeq}`,
+      asset_id: qr.asset_id,
+      asset_name: qr.asset_name,
+      qr_code_id: qr.id,
+      qr_code_label: qr.label,
+      user_id: `u-${visitSeq}`,
+      visitor_name: pick(INSPECTORS),
+      inspection_id: inspection?.id ?? null,
+      inspection_reference: inspection?.reference ?? null,
+      checked_in_at: checkedInAt.toISOString(),
+      checked_out_at: stillOnSite
+        ? null
+        : new Date(checkedInAt.getTime() + durationMinutes * 60000).toISOString(),
+      notes: null,
+    } satisfies SiteVisit;
   });
 });

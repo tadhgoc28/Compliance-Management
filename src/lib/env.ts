@@ -20,3 +20,6 @@ export const isSupabaseConfigured =
  */
 export const MAP_STYLE_URL =
   process.env.NEXT_PUBLIC_MAP_STYLE_URL ?? "__osm_raster__";
+
+/** Base URL used to build absolute links -- QR codes, email CTAs -- outside a request context. */
+export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.complyra.io";

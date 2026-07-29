@@ -19,6 +19,8 @@ import {
   demoDocuments,
   demoFindings,
   demoInspections,
+  demoQrCodes,
+  demoSiteVisits,
   demoSites,
 } from "./demo";
 import type {
@@ -30,7 +32,9 @@ import type {
   DocumentRecord,
   Finding,
   Inspection,
+  QrCode,
   Site,
+  SiteVisit,
 } from "@/lib/types";
 
 export interface AssetFilters {
@@ -419,6 +423,110 @@ async function withSignedUrls(
     ...r,
     url: r.external_url ?? (r.storage_path ? (byPath.get(r.storage_path) ?? null) : null),
   }));
+}
+
+/* -------------------------------------------------------------------------- */
+/* QR codes & site visits                                                     */
+/* -------------------------------------------------------------------------- */
+
+const QR_CODE_COLUMNS = "id, asset_id, asset_name, asset_reference, label, created_by_name, created_at";
+
+export async function getAssetQrCodes(assetId: string): Promise<QrCode[]> {
+  if (!isSupabaseConfigured) {
+    return demoQrCodes.filter((q) => q.asset_id === assetId);
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("qr_codes_api")
+    .select(QR_CODE_COLUMNS)
+    .eq("asset_id", assetId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(`getAssetQrCodes: ${error.message}`);
+  return data ?? [];
+}
+
+export async function getQrCode(qrCodeId: string): Promise<QrCode | null> {
+  if (!isSupabaseConfigured) {
+    return demoQrCodes.find((q) => q.id === qrCodeId) ?? null;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("qr_codes_api")
+    .select(QR_CODE_COLUMNS)
+    .eq("id", qrCodeId)
+    .maybeSingle();
+
+  if (error) throw new Error(`getQrCode: ${error.message}`);
+  return data;
+}
+
+const SITE_VISIT_COLUMNS =
+  "id, asset_id, asset_name, qr_code_id, qr_code_label, user_id, visitor_name, inspection_id, inspection_reference, checked_in_at, checked_out_at, notes";
+
+export async function getAssetVisits(assetId: string, limit = 20): Promise<SiteVisit[]> {
+  if (!isSupabaseConfigured) {
+    return [...demoSiteVisits]
+      .filter((v) => v.asset_id === assetId)
+      .sort((a, b) => b.checked_in_at.localeCompare(a.checked_in_at))
+      .slice(0, limit);
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("site_visits_api")
+    .select(SITE_VISIT_COLUMNS)
+    .eq("asset_id", assetId)
+    .order("checked_in_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(`getAssetVisits: ${error.message}`);
+  return data ?? [];
+}
+
+/** The scan page shows this so whoever's checking in can see who else has been through recently. */
+export async function getRecentVisitsForQrCode(qrCodeId: string, limit = 10): Promise<SiteVisit[]> {
+  if (!isSupabaseConfigured) {
+    return [...demoSiteVisits]
+      .filter((v) => v.qr_code_id === qrCodeId)
+      .sort((a, b) => b.checked_in_at.localeCompare(a.checked_in_at))
+      .slice(0, limit);
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("site_visits_api")
+    .select(SITE_VISIT_COLUMNS)
+    .eq("qr_code_id", qrCodeId)
+    .order("checked_in_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(`getRecentVisitsForQrCode: ${error.message}`);
+  return data ?? [];
+}
+
+/** Whether the signed-in visitor already has an open visit against this code, to set the button's initial state. */
+export async function getMyOpenVisit(qrCodeId: string): Promise<SiteVisit | null> {
+  if (!isSupabaseConfigured) return null;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("site_visits_api")
+    .select(SITE_VISIT_COLUMNS)
+    .eq("qr_code_id", qrCodeId)
+    .eq("user_id", user.id)
+    .is("checked_out_at", null)
+    .maybeSingle();
+
+  if (error) throw new Error(`getMyOpenVisit: ${error.message}`);
+  return data;
 }
 
 /* -------------------------------------------------------------------------- */

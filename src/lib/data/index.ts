@@ -486,6 +486,30 @@ export async function getAssetVisits(assetId: string, limit = 20): Promise<SiteV
   return data ?? [];
 }
 
+/** Estate-wide, for the attendance view -- not scoped to one asset. */
+export async function listSiteVisits(opts: { sinceDays?: number; limit?: number } = {}): Promise<SiteVisit[]> {
+  const { sinceDays = 30, limit = 1000 } = opts;
+  const since = new Date(Date.now() - sinceDays * 86400000).toISOString();
+
+  if (!isSupabaseConfigured) {
+    return [...demoSiteVisits]
+      .filter((v) => v.checked_in_at >= since)
+      .sort((a, b) => b.checked_in_at.localeCompare(a.checked_in_at))
+      .slice(0, limit);
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("site_visits_api")
+    .select(SITE_VISIT_COLUMNS)
+    .gte("checked_in_at", since)
+    .order("checked_in_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(`listSiteVisits: ${error.message}`);
+  return data ?? [];
+}
+
 /** The scan page shows this so whoever's checking in can see who else has been through recently. */
 export async function getRecentVisitsForQrCode(qrCodeId: string, limit = 10): Promise<SiteVisit[]> {
   if (!isSupabaseConfigured) {

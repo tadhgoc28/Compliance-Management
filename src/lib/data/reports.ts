@@ -1,4 +1,8 @@
+import "server-only";
+
+import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import { demoReports } from "./demo";
 
 export type ReportType =
   | "compliance_summary"
@@ -49,6 +53,10 @@ export async function createReport(
   fileFormat: FileFormat = "pdf",
   description?: string
 ): Promise<Report> {
+  if (!isSupabaseConfigured) {
+    throw new Error("Supabase not configured");
+  }
+
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -75,6 +83,10 @@ export async function createReport(
  * Get report by ID
  */
 export async function getReport(reportId: string): Promise<Report | null> {
+  if (!isSupabaseConfigured) {
+    return demoReports.find((r) => r.id === reportId) ?? null;
+  }
+
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -95,6 +107,13 @@ export async function listReports(
   limit = 50,
   offset = 0
 ): Promise<{ data: Report[]; total: number }> {
+  if (!isSupabaseConfigured) {
+    return {
+      data: demoReports.slice(offset, offset + limit),
+      total: demoReports.length,
+    };
+  }
+
   const supabase = await createClient();
 
   const { data, error, count } = await supabase

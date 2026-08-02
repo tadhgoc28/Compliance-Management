@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import {
   createReport,
@@ -21,12 +22,35 @@ const CreateReportSchema = z.object({
   filters: z.record(z.string(), z.any()).optional(),
 });
 
+/** The org the current session belongs to -- never trusted from a client-sent header. */
+async function getCurrentOrgId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("memberships")
+    .select("org_id")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  return data?.org_id ?? null;
+}
+
 /**
  * GET /api/reports
  * List reports for current org
  */
 export async function GET(request: NextRequest) {
   try {
+    if (!isSupabaseConfigured) {
+      const { data: reports } = await listReports("demo");
+      return NextResponse.json({
+        reports: reports.map((r) => ({ ...r, download_url: null })),
+        pagination: { offset: 0, limit: reports.length, total: reports.length },
+        storage_usage: { totalBytes: 0, reportCount: reports.length, averageSize: 0 },
+      });
+    }
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -37,9 +61,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const orgId = request.headers.get("x-org-id");
+    const orgId = await getCurrentOrgId(supabase, user.id);
     if (!orgId) {
-      return NextResponse.json({ error: "Missing org_id" }, { status: 400 });
+      return NextResponse.json({ error: "Not a member of any organisation" }, { status: 400 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -48,10 +72,8 @@ export async function GET(request: NextRequest) {
 
     const { data: reports, total } = await listReports(orgId, limit, offset);
 
-    // Get storage usage
     const usage = await getReportStorageUsage(orgId);
 
-    // Enrich reports with download URLs
     const enriched = await Promise.all(
       reports.map(async (report) => ({
         ...report,
@@ -84,6 +106,13 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!isSupabaseConfigured) {
+      return NextResponse.json(
+        { error: "Supabase not configured" },
+        { status: 503 },
+      );
+    }
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -94,9 +123,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const orgId = request.headers.get("x-org-id");
+    const orgId = await getCurrentOrgId(supabase, user.id);
     if (!orgId) {
-      return NextResponse.json({ error: "Missing org_id" }, { status: 400 });
+      return NextResponse.json({ error: "Not a member of any organisation" }, { status: 400 });
     }
 
     const body = await request.json();

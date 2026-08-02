@@ -1,5 +1,6 @@
 import {
   Building2,
+  FileBarChart,
   FileText,
   Images,
   LayoutDashboard,
@@ -14,4 +15,5 @@ export const NAV_ITEMS = [
   { href: "/findings", label: "Findings", icon: ShieldAlert },
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/gallery", label: "Photo Gallery", icon: Images },
+  { href: "/reports", label: "Reports", icon: FileBarChart },
 ] as const;

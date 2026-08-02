@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { AlertCircle, CheckCircle, Loader } from "lucide-react";
 import type { ReportType } from "@/lib/data/reports";
-import type { Discipline } from "@/lib/types";
 
 const REPORT_TEMPLATES = [
   {
@@ -29,11 +28,9 @@ const REPORT_TEMPLATES = [
 ];
 
 export function ReportBuilder({
-  disciplines,
   onReportCreated,
   onClose,
 }: {
-  disciplines: Discipline[];
   onReportCreated?: (reportId: string) => void;
   onClose?: () => void;
 }) {

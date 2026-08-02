@@ -128,7 +128,7 @@ export function ReportList() {
                 </td>
 
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" title={report.error_message ?? undefined}>
                     {getStatusIcon(report.status)}
                     <span className="text-ink-muted">{getStatusLabel(report.status)}</span>
                   </div>
@@ -140,9 +140,9 @@ export function ReportList() {
 
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    {report.status === "generated" && (
+                    {report.status === "generated" && report.download_url && (
                       <a
-                        href={report.download_url || "#"}
+                        href={report.download_url}
                         download
                         className="p-2 text-ink-muted hover:text-ink hover:bg-surface rounded transition"
                         title="Download"

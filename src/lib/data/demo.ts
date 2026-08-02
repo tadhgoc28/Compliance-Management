@@ -25,6 +25,7 @@ import type {
   Site,
   SiteVisit,
 } from "@/lib/types";
+import type { Report } from "./reports";
 
 /** Deterministic PRNG (mulberry32) so demo data is stable across reloads. */
 function rng(seed: number) {
@@ -650,3 +651,67 @@ export const demoAuditLogs: AuditLog[] = demoFindings.flatMap((f) => {
 
   return events;
 });
+
+/* -------------------------------------------------------------------------- */
+/* Reports                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A handful of already-generated reports so the Reports screen isn't empty on
+ * first look. Demo mode never runs real generation (no storage bucket to
+ * write to), so there's no "pending"/"generating" row here -- only
+ * historical, already-finished ones.
+ */
+export const demoReports: Report[] = [
+  {
+    id: "report-1",
+    org_id: DEMO_ORG.id,
+    created_by: "u-demo-1",
+    report_type: "compliance_summary",
+    title: "Q2 Compliance Summary",
+    description: null,
+    filters: {},
+    status: "generated",
+    file_size_bytes: 18_400,
+    storage_path: null,
+    file_format: "csv",
+    generated_at: isoDate(-14),
+    expires_at: isoDate(16),
+    created_at: isoDate(-14),
+    error_message: null,
+  },
+  {
+    id: "report-2",
+    org_id: DEMO_ORG.id,
+    created_by: "u-demo-1",
+    report_type: "deadline_report",
+    title: "Overdue & Due Soon — All Sites",
+    description: null,
+    filters: {},
+    status: "generated",
+    file_size_bytes: 9_800,
+    storage_path: null,
+    file_format: "csv",
+    generated_at: isoDate(-3),
+    expires_at: isoDate(27),
+    created_at: isoDate(-3),
+    error_message: null,
+  },
+  {
+    id: "report-3",
+    org_id: DEMO_ORG.id,
+    created_by: "u-demo-1",
+    report_type: "findings_by_discipline",
+    title: "Findings by Discipline — Legionella",
+    description: null,
+    filters: { discipline: ["legionella"] },
+    status: "failed",
+    file_size_bytes: null,
+    storage_path: null,
+    file_format: "csv",
+    generated_at: null,
+    expires_at: null,
+    created_at: isoDate(-1),
+    error_message: "No findings matched the selected filters.",
+  },
+];

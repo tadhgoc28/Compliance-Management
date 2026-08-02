@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { getReport, deleteReport, getReportDownloadUrl } from "@/lib/data/reports";
 
@@ -11,6 +12,15 @@ export async function GET(
   { params }: { params: Promise<{ reportId: string }> }
 ) {
   try {
+    if (!isSupabaseConfigured) {
+      const { reportId } = await params;
+      const report = await getReport(reportId);
+      if (!report) {
+        return NextResponse.json({ error: "Report not found" }, { status: 404 });
+      }
+      return NextResponse.json({ report: { ...report, download_url: null } });
+    }
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -31,12 +41,17 @@ export async function GET(
       return NextResponse.json({ error: "Report not found" }, { status: 404 });
     }
 
-    // Check authorization
-    if (
-      report.created_by !== user.id &&
-      report.org_id !== (request.headers.get("x-org-id") || null)
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    // RLS already scopes "reports" reads to the caller's org; this is just a
+    // friendlier 404 than a raw policy rejection.
+    const { data: membership } = await supabase
+      .from("memberships")
+      .select("org_id")
+      .eq("user_id", user.id)
+      .eq("org_id", report.org_id)
+      .maybeSingle();
+
+    if (report.created_by !== user.id && !membership) {
+      return NextResponse.json({ error: "Report not found" }, { status: 404 });
     }
 
     const downloadUrl =
@@ -66,6 +81,13 @@ export async function DELETE(
   { params }: { params: Promise<{ reportId: string }> }
 ) {
   try {
+    if (!isSupabaseConfigured) {
+      return NextResponse.json(
+        { error: "Supabase not configured" },
+        { status: 503 },
+      );
+    }
+
     const supabase = await createClient();
     const {
       data: { user },

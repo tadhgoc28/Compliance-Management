@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { getReport } from "@/lib/data/reports";
 import { generateReport } from "@/lib/services/report-generator";
@@ -11,6 +12,13 @@ import type { ReportGenerationTask } from "@/lib/services/report-generator";
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!isSupabaseConfigured) {
+      return NextResponse.json(
+        { error: "Supabase not configured" },
+        { status: 503 },
+      );
+    }
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -38,16 +46,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Get org_id from header
-    const orgId = request.headers.get("x-org-id");
-    if (!orgId) {
-      return NextResponse.json({ error: "Missing org_id" }, { status: 400 });
-    }
-
-    // Generate the report
+    // The report already carries the org it belongs to -- no need to trust a
+    // client-sent header for something the row already knows.
     const task: ReportGenerationTask = {
       reportId: report.id,
-      orgId,
+      orgId: report.org_id,
       reportType: report.report_type,
       filters: report.filters as any,
       fileFormat: report.file_format,

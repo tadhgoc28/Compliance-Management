@@ -362,8 +362,9 @@ export async function generateReport(task: ReportGenerationTask): Promise<{
       mimeType = "text/csv";
     }
 
-    // Upload to storage
-    const fileName = `reports/${task.orgId}/${task.reportId}-${Date.now()}.csv`;
+    // Upload to storage. Path must start with the org id -- that's the
+    // segment the reports_storage_* RLS policies authorise against.
+    const fileName = `${task.orgId}/${task.reportId}-${Date.now()}.csv`;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("reports")

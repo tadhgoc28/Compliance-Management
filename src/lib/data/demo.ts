@@ -436,7 +436,7 @@ export const demoFindings: Finding[] = demoAssets.flatMap((asset) => {
   return out;
 });
 
-const INSPECTORS = ["A. Byrne", "M. O'Sullivan", "K. Doyle", "R. Fitzgerald", "S. Nolan"];
+const INSPECTORS = ["A. Stuart", "D. Linehan", "C. Casey", "M. Ní Dhubthaigh", "M. Scott"];
 
 export const demoTeamMembers: TeamMember[] = INSPECTORS.map((full_name, i) => ({
   id: `u-team-${i + 1}`,
@@ -750,19 +750,19 @@ export const demoDisciplineRequirements: DisciplineCertificationRequirement[] = 
 
 /** A believable mix of valid and expired training, so the /team screen shows both. */
 const DEMO_CERTIFICATION_GRANTS = [
-  { holder: "A. Byrne", cert: "working_at_heights", issuedOffset: -400, expiresOffset: 200 },
-  { holder: "A. Byrne", cert: "asbestos_licensed", issuedOffset: -300, expiresOffset: 400 },
-  { holder: "M. O'Sullivan", cert: "confined_space", issuedOffset: -700, expiresOffset: -30 },
-  { holder: "M. O'Sullivan", cert: "manual_handling", issuedOffset: -100, expiresOffset: 600 },
-  { holder: "K. Doyle", cert: "gas_safe", issuedOffset: -200, expiresOffset: 500 },
-  { holder: "K. Doyle", cert: "first_aid", issuedOffset: -350, expiresOffset: 15 },
-  { holder: "R. Fitzgerald", cert: "electrical_qualified", issuedOffset: -150, expiresOffset: 550 },
-  { holder: "R. Fitzgerald", cert: "working_at_heights", issuedOffset: -800, expiresOffset: -60 },
-  { holder: "S. Nolan", cert: "legionella_risk_assessor", issuedOffset: -250, expiresOffset: 300 },
-  { holder: "A. Byrne", cert: "cscs_card", issuedOffset: -500, expiresOffset: 100 },
-  { holder: "A. Byrne", cert: "coshh", issuedOffset: -300, expiresOffset: 400 },
-  { holder: "M. O'Sullivan", cert: "ppe", issuedOffset: -600, expiresOffset: -10 },
-  { holder: "R. Fitzgerald", cert: "abrasive_wheels", issuedOffset: -450, expiresOffset: 250 },
+  { holder: "A. Stuart", cert: "working_at_heights", issuedOffset: -400, expiresOffset: 200 },
+  { holder: "A. Stuart", cert: "asbestos_licensed", issuedOffset: -300, expiresOffset: 400 },
+  { holder: "D. Linehan", cert: "confined_space", issuedOffset: -700, expiresOffset: -30 },
+  { holder: "D. Linehan", cert: "manual_handling", issuedOffset: -100, expiresOffset: 600 },
+  { holder: "C. Casey", cert: "gas_safe", issuedOffset: -200, expiresOffset: 500 },
+  { holder: "C. Casey", cert: "first_aid", issuedOffset: -350, expiresOffset: 15 },
+  { holder: "M. Ní Dhubthaigh", cert: "electrical_qualified", issuedOffset: -150, expiresOffset: 550 },
+  { holder: "M. Ní Dhubthaigh", cert: "working_at_heights", issuedOffset: -800, expiresOffset: -60 },
+  { holder: "M. Scott", cert: "legionella_risk_assessor", issuedOffset: -250, expiresOffset: 300 },
+  { holder: "A. Stuart", cert: "cscs_card", issuedOffset: -500, expiresOffset: 100 },
+  { holder: "A. Stuart", cert: "coshh", issuedOffset: -300, expiresOffset: 400 },
+  { holder: "D. Linehan", cert: "ppe", issuedOffset: -600, expiresOffset: -10 },
+  { holder: "M. Ní Dhubthaigh", cert: "abrasive_wheels", issuedOffset: -450, expiresOffset: 250 },
 ] as const;
 
 export const demoCertifications: Certification[] = DEMO_CERTIFICATION_GRANTS.map((grant, i) => {

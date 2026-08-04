@@ -196,6 +196,48 @@ export interface SiteVisit {
   checked_in_at: string;
   checked_out_at: string | null;
   notes: string | null;
+  /** Set at check-in time if the visitor was missing training the asset's disciplines require. */
+  compliance_flag: "missing_training" | null;
+  flag_details: { missing: Array<{ id: string; name: string }> } | null;
+}
+
+export interface TeamMember {
+  id: string;
+  full_name: string;
+}
+
+/** A recognised training/licence, e.g. "Working at Heights" -- org-customisable like disciplines. */
+export interface CertificationType {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+}
+
+/** A held certification, evidence of one person's competency to do one kind of work. */
+export interface Certification {
+  id: string;
+  profile_id: string;
+  holder_name: string | null;
+  certification_type_id: string;
+  certification_code: string;
+  certification_name: string;
+  reference: string | null;
+  issued_at: string | null;
+  expires_at: string | null;
+  document_id: string | null;
+  created_at: string;
+}
+
+/** What a discipline requires the attending person to hold before work can proceed. */
+export interface DisciplineCertificationRequirement {
+  id: string;
+  discipline_id: string;
+  discipline_code: string;
+  discipline_name: string;
+  certification_type_id: string;
+  certification_code: string;
+  certification_name: string;
 }
 
 /**

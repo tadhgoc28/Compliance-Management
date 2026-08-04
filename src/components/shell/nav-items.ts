@@ -7,6 +7,7 @@ import {
   LogIn,
   Map,
   ShieldAlert,
+  Users,
 } from "lucide-react";
 
 export const NAV_ITEMS = [
@@ -17,5 +18,6 @@ export const NAV_ITEMS = [
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/gallery", label: "Photo Gallery", icon: Images },
   { href: "/site-visits", label: "Site Visits", icon: LogIn },
+  { href: "/team", label: "Team", icon: Users },
   { href: "/reports", label: "Reports", icon: FileBarChart },
 ] as const;

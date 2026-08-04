@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowLeft,
   CalendarClock,
   FileText,
@@ -426,6 +427,12 @@ function SiteAccessTab({
           <ul className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
             {visits.map((v) => (
               <li key={v.id} className="flex items-center gap-3 px-4 py-3">
+                {v.compliance_flag ? (
+                  <AlertTriangle
+                    className="size-4 shrink-0 text-state-bad"
+                    aria-label="Missing required training"
+                  />
+                ) : null}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-ink">
                     {v.visitor_name ?? "Unknown"}
@@ -433,6 +440,9 @@ function SiteAccessTab({
                   <p className="text-xs text-ink-faint">
                     {v.qr_code_label ?? "Main entrance"} · {formatDateTime(v.checked_in_at)}
                     {v.inspection_reference ? ` · ${v.inspection_reference}` : ""}
+                    {v.compliance_flag && v.flag_details
+                      ? ` · Missing ${v.flag_details.missing.map((m) => m.name).join(", ")}`
+                      : ""}
                   </p>
                 </div>
                 <div className="shrink-0 text-right text-xs">

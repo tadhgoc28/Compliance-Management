@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, LogIn, MapPin, Users } from "lucide-react";
+import { AlertTriangle, Clock, LogIn, MapPin, Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { Card, CardBody, CardHeader, EmptyState } from "@/components/ui/card";
@@ -16,6 +16,7 @@ interface VisitorStats {
   totalMinutes: number;
   lastVisit: string;
   onSiteNow: boolean;
+  flagged: number;
 }
 
 /**
@@ -35,6 +36,7 @@ function aggregateByVisitor(visits: SiteVisit[]): VisitorStats[] {
       totalMinutes: 0,
       lastVisit: v.checked_in_at,
       onSiteNow: false,
+      flagged: 0,
     };
 
     stats.visits += 1;
@@ -46,6 +48,7 @@ function aggregateByVisitor(visits: SiteVisit[]): VisitorStats[] {
     } else {
       stats.onSiteNow = true;
     }
+    if (v.compliance_flag) stats.flagged += 1;
     if (v.checked_in_at > stats.lastVisit) stats.lastVisit = v.checked_in_at;
 
     byName.set(name, stats);
@@ -76,6 +79,7 @@ export default async function SiteVisitsPage() {
   const visitors = aggregateByVisitor(visits);
   const totalMinutes = visitors.reduce((sum, v) => sum + v.totalMinutes, 0);
   const onSiteNow = visits.filter((v) => !v.checked_out_at).length;
+  const flaggedCount = visits.filter((v) => v.compliance_flag).length;
   const recent = [...visits].slice(0, 30);
 
   return (
@@ -88,7 +92,7 @@ export default async function SiteVisitsPage() {
       <div className="space-y-5 p-4 md:p-6">
         <section
           aria-label="Key figures"
-          className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4"
+          className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-5"
         >
           <StatTile
             label="Total visits"
@@ -112,6 +116,14 @@ export default async function SiteVisitsPage() {
             label="Unique visitors"
             value={visitors.length}
             icon={<Users className="size-4" />}
+          />
+          <StatTile
+            label="Missing training"
+            value={flaggedCount}
+            hint="Flagged at check-in"
+            tone={flaggedCount > 0 ? "bad" : "ok"}
+            href="/team"
+            icon={<AlertTriangle className="size-4" />}
           />
         </section>
 
@@ -141,7 +153,17 @@ export default async function SiteVisitsPage() {
                   <tbody className="divide-y divide-border-subtle">
                     {visitors.map((v) => (
                       <tr key={v.name}>
-                        <td className="px-5 py-2.5 text-ink">{v.name}</td>
+                        <td className="px-5 py-2.5 text-ink">
+                          <span className="flex items-center gap-1.5">
+                            {v.name}
+                            {v.flagged > 0 ? (
+                              <AlertTriangle
+                                className="size-3.5 text-state-bad"
+                                aria-label={`${v.flagged} visit(s) missing required training`}
+                              />
+                            ) : null}
+                          </span>
+                        </td>
                         <td className="tnum px-5 py-2.5 text-ink-muted">{v.visits}</td>
                         <td className="tnum px-5 py-2.5 text-ink-muted">
                           {formatHours(v.totalMinutes)}
@@ -172,6 +194,12 @@ export default async function SiteVisitsPage() {
               <ul className="divide-y divide-border-subtle">
                 {recent.map((v) => (
                   <li key={v.id} className="flex items-center gap-3 px-5 py-2.5">
+                    {v.compliance_flag ? (
+                      <AlertTriangle
+                        className="size-4 shrink-0 text-state-bad"
+                        aria-label="Missing required training"
+                      />
+                    ) : null}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-ink">{v.visitor_name ?? "Unknown"}</p>
                       <p className="truncate text-xs text-ink-faint">
@@ -183,6 +211,9 @@ export default async function SiteVisitsPage() {
                           "Unknown asset"
                         )}
                         {v.qr_code_label ? ` · ${v.qr_code_label}` : ""}
+                        {v.compliance_flag && v.flag_details
+                          ? ` · Missing ${v.flag_details.missing.map((m) => m.name).join(", ")}`
+                          : ""}
                       </p>
                     </div>
                     <div className="shrink-0 text-right text-xs text-ink-faint">

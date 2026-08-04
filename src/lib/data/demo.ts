@@ -15,6 +15,9 @@ import type {
   Asset,
   AssetComplianceStatus,
   AuditLog,
+  Certification,
+  CertificationType,
+  DisciplineCertificationRequirement,
   Discipline,
   DocumentRecord,
   Finding,
@@ -24,6 +27,7 @@ import type {
   QrCode,
   Site,
   SiteVisit,
+  TeamMember,
 } from "@/lib/types";
 import type { Report } from "./reports";
 
@@ -434,6 +438,12 @@ export const demoFindings: Finding[] = demoAssets.flatMap((asset) => {
 
 const INSPECTORS = ["A. Byrne", "M. O'Sullivan", "K. Doyle", "R. Fitzgerald", "S. Nolan"];
 
+export const demoTeamMembers: TeamMember[] = INSPECTORS.map((full_name, i) => ({
+  id: `u-team-${i + 1}`,
+  full_name,
+}));
+const teamMemberByName = new Map(demoTeamMembers.map((m) => [m.full_name, m]));
+
 let inspectionSeq = 5000;
 
 export const demoInspections: Inspection[] = demoCompliance
@@ -548,6 +558,13 @@ export const demoQrCodes: QrCode[] = demoAssets.flatMap((asset) => {
 
 let visitSeq = 6000;
 
+/** Demo flavour text only -- real flagging runs server-side at check-in, see /api/checkin. */
+const SAMPLE_MISSING_CERTS = [
+  { id: "ct-working_at_heights", name: "Working at Heights" },
+  { id: "ct-confined_space", name: "Confined Space Entry" },
+  { id: "ct-asbestos_licensed", name: "Asbestos Operative (Licensed)" },
+];
+
 export const demoSiteVisits: SiteVisit[] = demoQrCodes.flatMap((qr) => {
   const count = randInt(0, 4);
   const relatedInspections = demoInspections.filter((insp) => insp.asset_id === qr.asset_id);
@@ -559,14 +576,16 @@ export const demoSiteVisits: SiteVisit[] = demoQrCodes.flatMap((qr) => {
     const stillOnSite = daysAgo === 0 && hoursAgo < 4 && rand() > 0.85;
     const durationMinutes = randInt(20, 240);
     const inspection = relatedInspections.length > 0 && rand() > 0.5 ? pick(relatedInspections) : null;
+    const visitor = pick(demoTeamMembers);
+    const flagged = rand() > 0.88;
     return {
       id: `visit-${visitSeq}`,
       asset_id: qr.asset_id,
       asset_name: qr.asset_name,
       qr_code_id: qr.id,
       qr_code_label: qr.label,
-      user_id: `u-${visitSeq}`,
-      visitor_name: pick(INSPECTORS),
+      user_id: visitor.id,
+      visitor_name: visitor.full_name,
       inspection_id: inspection?.id ?? null,
       inspection_reference: inspection?.reference ?? null,
       checked_in_at: checkedInAt.toISOString(),
@@ -574,6 +593,8 @@ export const demoSiteVisits: SiteVisit[] = demoQrCodes.flatMap((qr) => {
         ? null
         : new Date(checkedInAt.getTime() + durationMinutes * 60000).toISOString(),
       notes: null,
+      compliance_flag: flagged ? "missing_training" : null,
+      flag_details: flagged ? { missing: [pick(SAMPLE_MISSING_CERTS)] } : null,
     } satisfies SiteVisit;
   });
 });
@@ -650,6 +671,83 @@ export const demoAuditLogs: AuditLog[] = demoFindings.flatMap((f) => {
   }
 
   return events;
+});
+
+/* -------------------------------------------------------------------------- */
+/* Certifications                                                             */
+/* -------------------------------------------------------------------------- */
+
+/** Mirrors the system seed in 0016_certifications.sql. */
+export const demoCertificationTypes: CertificationType[] = [
+  { id: "ct-working_at_heights", code: "working_at_heights", name: "Working at Heights", description: "Safe use of ladders, MEWPs, harnesses and fall protection." },
+  { id: "ct-confined_space", code: "confined_space", name: "Confined Space Entry", description: "Safe entry, monitoring and rescue procedures for confined spaces." },
+  { id: "ct-asbestos_licensed", code: "asbestos_licensed", name: "Asbestos Operative (Licensed)", description: "HSE/HSA licensed to work with licensable asbestos-containing materials." },
+  { id: "ct-asbestos_nonlicensed", code: "asbestos_nonlicensed", name: "Asbestos Non-Licensed Operative", description: "Competent to work with non-licensable asbestos-containing materials." },
+  { id: "ct-legionella_risk_assessor", code: "legionella_risk_assessor", name: "Legionella Risk Assessor", description: "Competent person under ACOP L8 to carry out legionella risk assessments." },
+  { id: "ct-gas_safe", code: "gas_safe", name: "Gas Safe Registered Engineer", description: "Registered to carry out gas installation and safety work." },
+  { id: "ct-electrical_qualified", code: "electrical_qualified", name: "Electrical Qualified Supervisor", description: "18th Edition wiring regulations qualified." },
+  { id: "ct-manual_handling", code: "manual_handling", name: "Manual Handling", description: "Safe lifting and manual handling technique." },
+  { id: "ct-first_aid", code: "first_aid", name: "First Aid at Work", description: "Emergency first aid certification." },
+];
+const certTypeByCode = new Map(demoCertificationTypes.map((c) => [c.code, c]));
+
+/** Same default mapping the migration seeds for a real org, adjustable via the Requirements screen. */
+export const demoDisciplineRequirements: DisciplineCertificationRequirement[] = (
+  [
+    ["roof", "working_at_heights"],
+    ["structural", "working_at_heights"],
+    ["ventilation", "confined_space"],
+    ["asbestos", "asbestos_licensed"],
+    ["gas", "gas_safe"],
+    ["electrical", "electrical_qualified"],
+    ["legionella", "legionella_risk_assessor"],
+  ] as const
+).flatMap(([disciplineCode, certCode]) => {
+  const discipline = demoDisciplines.find((d) => d.code === disciplineCode);
+  const cert = certTypeByCode.get(certCode);
+  if (!discipline || !cert) return [];
+  return [
+    {
+      id: `req-${disciplineCode}-${certCode}`,
+      discipline_id: discipline.id,
+      discipline_code: discipline.code,
+      discipline_name: discipline.name,
+      certification_type_id: cert.id,
+      certification_code: cert.code,
+      certification_name: cert.name,
+    } satisfies DisciplineCertificationRequirement,
+  ];
+});
+
+/** A believable mix of valid and expired training, so the /team screen shows both. */
+const DEMO_CERTIFICATION_GRANTS = [
+  { holder: "A. Byrne", cert: "working_at_heights", issuedOffset: -400, expiresOffset: 200 },
+  { holder: "A. Byrne", cert: "asbestos_licensed", issuedOffset: -300, expiresOffset: 400 },
+  { holder: "M. O'Sullivan", cert: "confined_space", issuedOffset: -700, expiresOffset: -30 },
+  { holder: "M. O'Sullivan", cert: "manual_handling", issuedOffset: -100, expiresOffset: 600 },
+  { holder: "K. Doyle", cert: "gas_safe", issuedOffset: -200, expiresOffset: 500 },
+  { holder: "K. Doyle", cert: "first_aid", issuedOffset: -350, expiresOffset: 15 },
+  { holder: "R. Fitzgerald", cert: "electrical_qualified", issuedOffset: -150, expiresOffset: 550 },
+  { holder: "R. Fitzgerald", cert: "working_at_heights", issuedOffset: -800, expiresOffset: -60 },
+  { holder: "S. Nolan", cert: "legionella_risk_assessor", issuedOffset: -250, expiresOffset: 300 },
+] as const;
+
+export const demoCertifications: Certification[] = DEMO_CERTIFICATION_GRANTS.map((grant, i) => {
+  const holder = teamMemberByName.get(grant.holder)!;
+  const cert = certTypeByCode.get(grant.cert)!;
+  return {
+    id: `cert-${i + 1}`,
+    profile_id: holder.id,
+    holder_name: holder.full_name,
+    certification_type_id: cert.id,
+    certification_code: cert.code,
+    certification_name: cert.name,
+    reference: `${cert.code.toUpperCase().slice(0, 4)}-${randInt(1000, 9999)}`,
+    issued_at: isoDate(grant.issuedOffset),
+    expires_at: isoDate(grant.expiresOffset),
+    document_id: null,
+    created_at: isoDate(grant.issuedOffset),
+  } satisfies Certification;
 });
 
 /* -------------------------------------------------------------------------- */

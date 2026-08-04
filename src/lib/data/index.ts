@@ -14,7 +14,10 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import {
   demoAssets,
+  demoCertificationTypes,
+  demoCertifications,
   demoCompliance,
+  demoDisciplineRequirements,
   demoDisciplines,
   demoDocuments,
   demoFindings,
@@ -22,12 +25,16 @@ import {
   demoQrCodes,
   demoSiteVisits,
   demoSites,
+  demoTeamMembers,
 } from "./demo";
 import type {
   Asset,
   AssetComplianceStatus,
+  Certification,
+  CertificationType,
   DashboardSummary,
   Discipline,
+  DisciplineCertificationRequirement,
   DisciplineSummary,
   DocumentRecord,
   Finding,
@@ -35,6 +42,7 @@ import type {
   QrCode,
   Site,
   SiteVisit,
+  TeamMember,
 } from "@/lib/types";
 
 export interface AssetFilters {
@@ -312,9 +320,9 @@ export async function getFinding(id: string): Promise<Finding | null> {
   return data;
 }
 
-export async function listTeamMembers(): Promise<Array<{ id: string; full_name: string }>> {
+export async function listTeamMembers(): Promise<TeamMember[]> {
   if (!isSupabaseConfigured) {
-    return [];
+    return demoTeamMembers;
   }
 
   const supabase = await createClient();
@@ -464,7 +472,7 @@ export async function getQrCode(qrCodeId: string): Promise<QrCode | null> {
 }
 
 const SITE_VISIT_COLUMNS =
-  "id, asset_id, asset_name, qr_code_id, qr_code_label, user_id, visitor_name, inspection_id, inspection_reference, checked_in_at, checked_out_at, notes";
+  "id, asset_id, asset_name, qr_code_id, qr_code_label, user_id, visitor_name, inspection_id, inspection_reference, checked_in_at, checked_out_at, notes, compliance_flag, flag_details";
 
 export async function getAssetVisits(assetId: string, limit = 20): Promise<SiteVisit[]> {
   if (!isSupabaseConfigured) {
@@ -551,6 +559,60 @@ export async function getMyOpenVisit(qrCodeId: string): Promise<SiteVisit | null
 
   if (error) throw new Error(`getMyOpenVisit: ${error.message}`);
   return data;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Training & certifications                                                  */
+/* -------------------------------------------------------------------------- */
+
+export async function listCertificationTypes(): Promise<CertificationType[]> {
+  if (!isSupabaseConfigured) {
+    return demoCertificationTypes;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("certification_types")
+    .select("id, code, name, description")
+    .order("name");
+
+  if (error) throw new Error(`listCertificationTypes: ${error.message}`);
+  return data ?? [];
+}
+
+/** What every discipline currently requires the attending person to hold, org-wide. */
+export async function listDisciplineRequirements(): Promise<DisciplineCertificationRequirement[]> {
+  if (!isSupabaseConfigured) {
+    return demoDisciplineRequirements;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("discipline_certification_requirements_api")
+    .select(
+      "id, discipline_id, discipline_code, discipline_name, certification_type_id, certification_code, certification_name",
+    );
+
+  if (error) throw new Error(`listDisciplineRequirements: ${error.message}`);
+  return data ?? [];
+}
+
+/** Every held certification, org-wide -- the training register a manager checks before assigning work. */
+export async function listCertifications(): Promise<Certification[]> {
+  if (!isSupabaseConfigured) {
+    return demoCertifications;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("certifications_api")
+    .select(
+      "id, profile_id, holder_name, certification_type_id, certification_code, certification_name, reference, issued_at, expires_at, document_id, created_at",
+    )
+    .order("holder_name");
+
+  if (error) throw new Error(`listCertifications: ${error.message}`);
+  return data ?? [];
 }
 
 /* -------------------------------------------------------------------------- */

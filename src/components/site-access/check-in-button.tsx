@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AlertTriangle } from "lucide-react";
 
 export function CheckInButton({
   qrCodeId,
@@ -15,11 +16,13 @@ export function CheckInButton({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [missingTraining, setMissingTraining] = useState<string[]>([]);
 
   async function handleToggle() {
     setLoading(true);
     setError(null);
     setMessage(null);
+    setMissingTraining([]);
     try {
       const res = await fetch("/api/checkin", {
         method: "POST",
@@ -31,6 +34,9 @@ export function CheckInButton({
 
       setCheckedIn(data.action === "checked_in");
       setMessage(data.action === "checked_in" ? "Checked in." : "Checked out.");
+      if (data.action === "checked_in" && Array.isArray(data.missingTraining)) {
+        setMissingTraining(data.missingTraining.map((m: { name: string }) => m.name));
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -54,6 +60,18 @@ export function CheckInButton({
       </button>
       {message ? <p className="text-center text-sm text-state-ok">{message}</p> : null}
       {error ? <p className="text-center text-sm text-state-bad">{error}</p> : null}
+      {missingTraining.length > 0 ? (
+        <div className="flex items-start gap-2 rounded-lg bg-state-bad-soft p-3 text-left text-sm text-state-bad">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <div>
+            <p className="font-medium">Missing required training</p>
+            <p className="mt-0.5 text-xs">
+              {missingTraining.join(", ")} -- this visit has been flagged. Do not proceed with
+              this work without a suitably qualified person.
+            </p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

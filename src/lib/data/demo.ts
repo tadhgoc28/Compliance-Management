@@ -688,6 +688,10 @@ export const demoCertificationTypes: CertificationType[] = [
   { id: "ct-electrical_qualified", code: "electrical_qualified", name: "Electrical Qualified Supervisor", description: "18th Edition wiring regulations qualified." },
   { id: "ct-manual_handling", code: "manual_handling", name: "Manual Handling", description: "Safe lifting and manual handling technique." },
   { id: "ct-first_aid", code: "first_aid", name: "First Aid at Work", description: "Emergency first aid certification." },
+  { id: "ct-cscs_card", code: "cscs_card", name: "CSCS Card (or equivalent)", description: "Construction Skills Certification Scheme card, or equivalent (e.g. Safe Pass), evidencing standard site access competency." },
+  { id: "ct-abrasive_wheels", code: "abrasive_wheels", name: "Abrasive Wheels", description: "Safe mounting, use and inspection of abrasive wheels for cutting and grinding." },
+  { id: "ct-coshh", code: "coshh", name: "COSHH", description: "Control of Substances Hazardous to Health -- safe handling, storage and use of hazardous substances." },
+  { id: "ct-ppe", code: "ppe", name: "PPE Awareness", description: "Correct selection, use, maintenance and limitations of personal protective equipment." },
 ];
 const certTypeByCode = new Map(demoCertificationTypes.map((c) => [c.code, c]));
 
@@ -701,6 +705,31 @@ export const demoDisciplineRequirements: DisciplineCertificationRequirement[] = 
     ["gas", "gas_safe"],
     ["electrical", "electrical_qualified"],
     ["legionella", "legionella_risk_assessor"],
+    // Baseline site-access and PPE training, required regardless of discipline.
+    ["asbestos", "cscs_card"],
+    ["fire", "cscs_card"],
+    ["legionella", "cscs_card"],
+    ["electrical", "cscs_card"],
+    ["gas", "cscs_card"],
+    ["ventilation", "cscs_card"],
+    ["roof", "cscs_card"],
+    ["structural", "cscs_card"],
+    ["asbestos", "ppe"],
+    ["fire", "ppe"],
+    ["legionella", "ppe"],
+    ["electrical", "ppe"],
+    ["gas", "ppe"],
+    ["ventilation", "ppe"],
+    ["roof", "ppe"],
+    ["structural", "ppe"],
+    // Hazardous-substance handling.
+    ["asbestos", "coshh"],
+    ["legionella", "coshh"],
+    ["gas", "coshh"],
+    // Cutting/grinding work.
+    ["roof", "abrasive_wheels"],
+    ["structural", "abrasive_wheels"],
+    ["ventilation", "abrasive_wheels"],
   ] as const
 ).flatMap(([disciplineCode, certCode]) => {
   const discipline = demoDisciplines.find((d) => d.code === disciplineCode);
@@ -730,6 +759,10 @@ const DEMO_CERTIFICATION_GRANTS = [
   { holder: "R. Fitzgerald", cert: "electrical_qualified", issuedOffset: -150, expiresOffset: 550 },
   { holder: "R. Fitzgerald", cert: "working_at_heights", issuedOffset: -800, expiresOffset: -60 },
   { holder: "S. Nolan", cert: "legionella_risk_assessor", issuedOffset: -250, expiresOffset: 300 },
+  { holder: "A. Byrne", cert: "cscs_card", issuedOffset: -500, expiresOffset: 100 },
+  { holder: "A. Byrne", cert: "coshh", issuedOffset: -300, expiresOffset: 400 },
+  { holder: "M. O'Sullivan", cert: "ppe", issuedOffset: -600, expiresOffset: -10 },
+  { holder: "R. Fitzgerald", cert: "abrasive_wheels", issuedOffset: -450, expiresOffset: 250 },
 ] as const;
 
 export const demoCertifications: Certification[] = DEMO_CERTIFICATION_GRANTS.map((grant, i) => {

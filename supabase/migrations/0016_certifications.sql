@@ -216,7 +216,11 @@ insert into public.certification_types (org_id, code, name, description) values
   (null, 'gas_safe',                 'Gas Safe Registered Engineer',       'Registered to carry out gas installation and safety work.'),
   (null, 'electrical_qualified',     'Electrical Qualified Supervisor',    '18th Edition wiring regulations qualified.'),
   (null, 'manual_handling',          'Manual Handling',                    'Safe lifting and manual handling technique.'),
-  (null, 'first_aid',                'First Aid at Work',                  'Emergency first aid certification.')
+  (null, 'first_aid',                'First Aid at Work',                  'Emergency first aid certification.'),
+  (null, 'cscs_card',                'CSCS Card (or equivalent)',          'Construction Skills Certification Scheme card, or equivalent (e.g. Safe Pass), evidencing standard site access competency.'),
+  (null, 'abrasive_wheels',          'Abrasive Wheels',                    'Safe mounting, use and inspection of abrasive wheels for cutting and grinding.'),
+  (null, 'coshh',                    'COSHH',                              'Control of Substances Hazardous to Health -- safe handling, storage and use of hazardous substances.'),
+  (null, 'ppe',                      'PPE Awareness',                      'Correct selection, use, maintenance and limitations of personal protective equipment.')
 on conflict do nothing;
 
 -- Default discipline -> required-training mapping, applied per organisation
@@ -232,7 +236,32 @@ cross join (values
   ('asbestos',    'asbestos_licensed'),
   ('gas',         'gas_safe'),
   ('electrical',  'electrical_qualified'),
-  ('legionella',  'legionella_risk_assessor')
+  ('legionella',  'legionella_risk_assessor'),
+  -- Baseline site-access and PPE training, required regardless of discipline.
+  ('asbestos',    'cscs_card'),
+  ('fire',        'cscs_card'),
+  ('legionella',  'cscs_card'),
+  ('electrical',  'cscs_card'),
+  ('gas',         'cscs_card'),
+  ('ventilation', 'cscs_card'),
+  ('roof',        'cscs_card'),
+  ('structural',  'cscs_card'),
+  ('asbestos',    'ppe'),
+  ('fire',        'ppe'),
+  ('legionella',  'ppe'),
+  ('electrical',  'ppe'),
+  ('gas',         'ppe'),
+  ('ventilation', 'ppe'),
+  ('roof',        'ppe'),
+  ('structural',  'ppe'),
+  -- Hazardous-substance handling.
+  ('asbestos',    'coshh'),
+  ('legionella',  'coshh'),
+  ('gas',         'coshh'),
+  -- Cutting/grinding work.
+  ('roof',        'abrasive_wheels'),
+  ('structural',  'abrasive_wheels'),
+  ('ventilation', 'abrasive_wheels')
 ) as defaults(discipline_code, cert_code)
 join public.disciplines d on d.code = defaults.discipline_code and d.org_id is null
 join public.certification_types ct on ct.code = defaults.cert_code and ct.org_id is null

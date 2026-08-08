@@ -28,6 +28,7 @@ import type {
   Site,
   SiteVisit,
   TeamMember,
+  WorkOrder,
 } from "@/lib/types";
 import type { Report } from "./reports";
 
@@ -556,6 +557,44 @@ export const demoQrCodes: QrCode[] = demoAssets.flatMap((asset) => {
   });
 });
 
+/** A handful of jobs with an agreed rate, so the Site Visits page has something to price hours against. */
+export const demoWorkOrders: WorkOrder[] = [
+  {
+    id: "wo-1",
+    reference: "WO-1001",
+    description: "Q3 roof condition survey",
+    asset_id: demoAssets[0]?.id ?? null,
+    asset_name: demoAssets[0]?.name ?? null,
+    agreed_rate: 45,
+    rate_unit: "hourly",
+    created_by_name: "D. Linehan",
+    created_at: isoDate(-60),
+  },
+  {
+    id: "wo-2",
+    reference: "WO-1002",
+    description: "Asbestos re-inspection following remediation",
+    asset_id: demoAssets[1]?.id ?? null,
+    asset_name: demoAssets[1]?.name ?? null,
+    agreed_rate: 320,
+    rate_unit: "daily",
+    created_by_name: "A. Stuart",
+    created_at: isoDate(-40),
+  },
+  {
+    id: "wo-3",
+    reference: "WO-1003",
+    description: "Legionella water hygiene sampling round",
+    asset_id: demoAssets[2]?.id ?? null,
+    asset_name: demoAssets[2]?.name ?? null,
+    agreed_rate: 850,
+    rate_unit: "fixed",
+    created_by_name: "M. Scott",
+    created_at: isoDate(-20),
+  },
+] satisfies WorkOrder[];
+const workOrderByAssetId = new Map(demoWorkOrders.filter((w) => w.asset_id).map((w) => [w.asset_id, w]));
+
 let visitSeq = 6000;
 
 /** Demo flavour text only -- real flagging runs server-side at check-in, see /api/checkin. */
@@ -578,6 +617,8 @@ export const demoSiteVisits: SiteVisit[] = demoQrCodes.flatMap((qr) => {
     const inspection = relatedInspections.length > 0 && rand() > 0.5 ? pick(relatedInspections) : null;
     const visitor = pick(demoTeamMembers);
     const flagged = rand() > 0.88;
+    const workOrder = workOrderByAssetId.get(qr.asset_id);
+    const onWorkOrder = workOrder && rand() > 0.4;
     return {
       id: `visit-${visitSeq}`,
       asset_id: qr.asset_id,
@@ -595,6 +636,8 @@ export const demoSiteVisits: SiteVisit[] = demoQrCodes.flatMap((qr) => {
       notes: null,
       compliance_flag: flagged ? "missing_training" : null,
       flag_details: flagged ? { missing: [pick(SAMPLE_MISSING_CERTS)] } : null,
+      work_order_id: onWorkOrder ? workOrder.id : null,
+      work_order_reference: onWorkOrder ? workOrder.reference : null,
     } satisfies SiteVisit;
   });
 });

@@ -26,6 +26,7 @@ import {
   demoSiteVisits,
   demoSites,
   demoTeamMembers,
+  demoWorkOrders,
 } from "./demo";
 import type {
   Asset,
@@ -43,6 +44,7 @@ import type {
   Site,
   SiteVisit,
   TeamMember,
+  WorkOrder,
 } from "@/lib/types";
 
 export interface AssetFilters {
@@ -472,7 +474,7 @@ export async function getQrCode(qrCodeId: string): Promise<QrCode | null> {
 }
 
 const SITE_VISIT_COLUMNS =
-  "id, asset_id, asset_name, qr_code_id, qr_code_label, user_id, visitor_name, inspection_id, inspection_reference, checked_in_at, checked_out_at, notes, compliance_flag, flag_details";
+  "id, asset_id, asset_name, qr_code_id, qr_code_label, user_id, visitor_name, inspection_id, inspection_reference, checked_in_at, checked_out_at, notes, compliance_flag, flag_details, work_order_id, work_order_reference";
 
 export async function getAssetVisits(assetId: string, limit = 20): Promise<SiteVisit[]> {
   if (!isSupabaseConfigured) {
@@ -612,6 +614,24 @@ export async function listCertifications(): Promise<Certification[]> {
     .order("holder_name");
 
   if (error) throw new Error(`listCertifications: ${error.message}`);
+  return data ?? [];
+}
+
+/** Every work order, org-wide -- what the Site Visits page prices logged hours against. */
+export async function listWorkOrders(): Promise<WorkOrder[]> {
+  if (!isSupabaseConfigured) {
+    return [...demoWorkOrders].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("work_orders_api")
+    .select(
+      "id, reference, description, asset_id, asset_name, agreed_rate, rate_unit, created_by_name, created_at",
+    )
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(`listWorkOrders: ${error.message}`);
   return data ?? [];
 }
 

@@ -199,6 +199,23 @@ export interface SiteVisit {
   /** Set at check-in time if the visitor was missing training the asset's disciplines require. */
   compliance_flag: "missing_training" | null;
   flag_details: { missing: Array<{ id: string; name: string }> } | null;
+  work_order_id: string | null;
+  work_order_reference?: string | null;
+}
+
+export type RateUnit = "hourly" | "daily" | "fixed";
+
+/** What a job was agreed at -- the unit a payment/KPI figure gets built on, see 0017_work_orders.sql. */
+export interface WorkOrder {
+  id: string;
+  reference: string;
+  description: string | null;
+  asset_id: string | null;
+  asset_name?: string | null;
+  agreed_rate: number | null;
+  rate_unit: RateUnit;
+  created_by_name?: string | null;
+  created_at: string;
 }
 
 export interface TeamMember {

@@ -3,7 +3,9 @@ import { AlertTriangle, Clock, LogIn, MapPin, Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { Card, CardBody, CardHeader, EmptyState } from "@/components/ui/card";
-import { listSiteVisits } from "@/lib/data";
+import { WorkOrdersPanel } from "@/components/site-visits/work-orders-panel";
+import { VisitWorkOrderSelect } from "@/components/site-visits/visit-work-order-select";
+import { listAssets, listSiteVisits, listWorkOrders } from "@/lib/data";
 import type { SiteVisit } from "@/lib/types";
 
 export const metadata = { title: "Site Visits" };
@@ -74,7 +76,12 @@ function formatDateTime(value: string): string {
 }
 
 export default async function SiteVisitsPage() {
-  const visits = await listSiteVisits({ sinceDays: WINDOW_DAYS, limit: 2000 });
+  const [visits, workOrders, assetPage] = await Promise.all([
+    listSiteVisits({ sinceDays: WINDOW_DAYS, limit: 2000 }),
+    listWorkOrders(),
+    listAssets({ pageSize: 500 }),
+  ]);
+  const assetOptions = assetPage.rows.map((a) => ({ id: a.id, name: a.name }));
 
   const visitors = aggregateByVisitor(visits);
   const totalMinutes = visitors.reduce((sum, v) => sum + v.totalMinutes, 0);
@@ -185,6 +192,8 @@ export default async function SiteVisitsPage() {
           </CardBody>
         </Card>
 
+        <WorkOrdersPanel workOrders={workOrders} visits={visits} assets={assetOptions} />
+
         <Card>
           <CardHeader title="Recent visits" description="Latest check-ins across every site." />
           <CardBody className="p-0">
@@ -216,6 +225,7 @@ export default async function SiteVisitsPage() {
                           : ""}
                       </p>
                     </div>
+                    <VisitWorkOrderSelect visitId={v.id} workOrderId={v.work_order_id} workOrders={workOrders} />
                     <div className="shrink-0 text-right text-xs text-ink-faint">
                       {formatDateTime(v.checked_in_at)}
                       {v.checked_out_at ? "" : " · on site"}
